@@ -3,8 +3,9 @@ import { verifyAccessToken } from '@/lib/jwt';
 import { getUserById } from '@/lib/auth';
 import { getDbConnection } from '@/lib/db';
 import crypto from 'crypto';
+import { withApiSecurity } from '@/lib/api-security';
 
-export async function POST(request: NextRequest) {
+async function handleChangePassword(request: NextRequest) {
   try {
     // Get token from HTTP-only cookie
     const token = request.cookies.get('access_token')?.value;
@@ -93,3 +94,5 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+export const POST = withApiSecurity(handleChangePassword);

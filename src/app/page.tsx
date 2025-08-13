@@ -29,11 +29,18 @@ import {
 import { useState, useEffect } from 'react';
 import { CharacterName } from '@/lib/character-name';
 import { ScrollToTop } from '@/components/ui/scroll-to-top';
+import { secureFetch } from '@/lib/api-security';
 
 interface RankingPlayer {
   rank: number;
   charname: string;
   level: number;
+}
+
+interface Server {
+  id: number;
+  name: string;
+  status: string;
 }
 
 export default function HomePage() {
@@ -43,6 +50,8 @@ export default function HomePage() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [rankings, setRankings] = useState<RankingPlayer[]>([]);
   const [isLoadingRankings, setIsLoadingRankings] = useState(true);
+  const [servers, setServers] = useState<Server[]>([]);
+  const [isLoadingServers, setIsLoadingServers] = useState(true);
 
   // Check authentication status from server
   useEffect(() => {
@@ -71,7 +80,7 @@ export default function HomePage() {
   useEffect(() => {
     const fetchRankings = async () => {
       try {
-        const response = await fetch('/api/v1/bangxephang');
+        const response = await secureFetch('/api/v1/bangxephang');
         if (response.ok) {
           const data = await response.json();
           if (data.success) {
@@ -86,6 +95,27 @@ export default function HomePage() {
     };
 
     fetchRankings();
+  }, []);
+
+  // Fetch servers data
+  useEffect(() => {
+    const fetchServers = async () => {
+      try {
+        const response = await secureFetch('/api/v1/servers');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            setServers(data.data);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching servers:', error);
+      } finally {
+        setIsLoadingServers(false);
+      }
+    };
+
+    fetchServers();
   }, []);
 
   // Logout function
@@ -544,68 +574,63 @@ export default function HomePage() {
               {/* Content */}
               <div className="p-6 space-y-4 flex flex-col max-h-[600px]">
                 <div className="space-y-4 flex-1 overflow-y-auto custom-scrollbar">
-                  {[
-                    {
-                      name: 'Thiên Hà Server',
-                      status: 'online',
-                      players: 1000,
-                      capacity: 3000,
-                    },
-                    {
-                      name: 'Võ Lâm Server',
-                      status: 'maintenance',
-                      players: 0,
-                      capacity: 3000,
-                    },
-                  ].map((server, index) => (
-                    <div
-                      key={index}
-                      className="bg-gradient-to-r from-amber-800/40 to-yellow-800/30 backdrop-blur-sm rounded-2xl border border-amber-400/30 p-4 hover:from-amber-700/50 hover:to-yellow-700/40 transition-all duration-300 group"
-                    >
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className={`w-4 h-4 rounded-full ${
-                              server.status === 'online'
-                                ? 'bg-green-400 animate-pulse shadow-lg shadow-green-400/50'
-                                : 'bg-red-400 animate-pulse shadow-lg shadow-red-400/50'
-                            }`}
-                          ></div>
-                          <h4 className="text-white font-bold text-lg group-hover:text-amber-200 transition-colors">
-                            {server.name}
-                          </h4>
+                  {isLoadingServers ? (
+                    // Loading skeleton
+                    Array.from({ length: 2 }).map((_, index) => (
+                      <div
+                        key={index}
+                        className="bg-gradient-to-r from-amber-800/40 to-yellow-800/30 backdrop-blur-sm rounded-2xl border border-amber-400/30 p-4 animate-pulse"
+                      >
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-4 h-4 bg-amber-500/50 rounded-full"></div>
+                            <div className="h-5 bg-amber-500/50 rounded w-24"></div>
+                          </div>
+                          <div className="h-6 bg-amber-500/50 rounded w-20"></div>
                         </div>
-                        <span
-                          className={`px-3 py-1 rounded-full text-xs font-bold ${
-                            server.status === 'online'
-                              ? 'bg-green-500/20 text-green-300 border border-green-400/30'
-                              : 'bg-red-500/20 text-red-300 border border-red-400/30'
-                          }`}
-                        >
-                          {server.status === 'online' ? 'HOẠT ĐỘNG' : 'BẢO TRÌ'}
-                        </span>
                       </div>
-
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div className="flex items-center gap-2">
-                          <Users className="w-4 h-4 text-amber-300" />
-                          <span className="text-white/90">
-                            {server.players}/{server.capacity}
+                    ))
+                  ) : servers.length > 0 ? (
+                    servers.map((server, index) => (
+                      <div
+                        key={server.id || index}
+                        className="bg-gradient-to-r from-amber-800/40 to-yellow-800/30 backdrop-blur-sm rounded-2xl border border-amber-400/30 p-4 hover:from-amber-700/50 hover:to-yellow-700/40 transition-all duration-300 group"
+                      >
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-3">
+                            <div
+                              className={`w-4 h-4 rounded-full ${
+                                server.status === 'online'
+                                  ? 'bg-green-400 animate-pulse shadow-lg shadow-green-400/50'
+                                  : 'bg-red-400 animate-pulse shadow-lg shadow-red-400/50'
+                              }`}
+                            ></div>
+                            <h4 className="text-white font-bold text-lg group-hover:text-amber-200 transition-colors">
+                              {server.name}
+                            </h4>
+                          </div>
+                          <span
+                            className={`px-3 py-1 rounded-full text-xs font-bold ${
+                              server.status === 'online'
+                                ? 'bg-green-500/20 text-green-300 border border-green-400/30'
+                                : 'bg-red-500/20 text-red-300 border border-red-400/30'
+                            }`}
+                          >
+                            {server.status === 'online' ? 'HOẠT ĐỘNG' : 'BẢO TRÌ'}
                           </span>
                         </div>
                       </div>
-
-                      {/* Progress Bar */}
-                      <div className="mt-3">
-                        <div className="w-full bg-amber-900/50 rounded-full h-2">
-                          <div
-                            className="bg-gradient-to-r from-amber-400 to-yellow-400 h-2 rounded-full transition-all duration-500"
-                            style={{ width: `${(server.players / server.capacity) * 100}%` }}
-                          ></div>
-                        </div>
+                    ))
+                  ) : (
+                    // No data available
+                    <div className="text-center py-8">
+                      <div className="text-amber-200/60 mb-2">
+                        <Server className="w-12 h-12 mx-auto mb-3 opacity-50" />
                       </div>
+                      <p className="text-amber-200/80">Không có server nào</p>
+                      <p className="text-amber-200/60 text-sm mt-1">Vui lòng thử lại sau</p>
                     </div>
-                  ))}
+                  )}
                 </div>
 
                 {/* <div className="text-center pt-4 flex-shrink-0">

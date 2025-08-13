@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { loginUser } from '@/lib/auth';
 import { createTokenCookies } from '@/lib/middleware';
+import { withAuthSecurity } from '@/lib/api-security';
 
-export async function POST(request: NextRequest) {
+async function handleLogin(request: NextRequest) {
   try {
     const body = await request.json();
     const { username, password } = body;
@@ -10,6 +11,11 @@ export async function POST(request: NextRequest) {
     // Validate input
     if (!username || !password) {
       return NextResponse.json({ error: 'Username and password are required' }, { status: 400 });
+    }
+
+    // Additional validation for spam prevention
+    if (username.length < 3 || username.length > 20 || password.length < 6) {
+      return NextResponse.json({ error: 'Invalid credentials format' }, { status: 400 });
     }
 
     // Attempt login
@@ -44,3 +50,5 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+export const POST = withAuthSecurity(handleLogin);

@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { logoutUser } from '@/lib/auth';
 import { clearAuthCookies } from '@/lib/middleware';
 import { verifyAccessToken } from '@/lib/jwt';
+import { withApiSecurity } from '@/lib/api-security';
 
-export async function POST(request: NextRequest) {
+async function handleLogout(request: NextRequest) {
   try {
     // Get user from token instead of request body
     const token = request.cookies.get('access_token')?.value;
@@ -45,3 +46,5 @@ export async function POST(request: NextRequest) {
     return response;
   }
 }
+
+export const POST = withApiSecurity(handleLogout);

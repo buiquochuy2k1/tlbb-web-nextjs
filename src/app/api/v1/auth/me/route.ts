@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAccessToken } from '@/lib/jwt';
 import { getUserById } from '@/lib/auth';
+import { withApiSecurity } from '@/lib/api-security';
 
-export async function GET(request: NextRequest) {
+async function handleGetMe(request: NextRequest) {
   try {
     // Get token from HTTP-only cookie
     const token = request.cookies.get('access_token')?.value;
@@ -34,3 +35,5 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+export const GET = withApiSecurity(handleGetMe);

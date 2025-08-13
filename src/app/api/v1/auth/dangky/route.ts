@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { registerUser, isUsernameAvailable } from '@/lib/auth';
+import { withAuthSecurity } from '@/lib/api-security';
 
-export async function POST(request: NextRequest) {
+async function handleRegisterPOST(request: NextRequest) {
   try {
     const body = await request.json();
     const { username, password, confirmPassword, question, answer, email, phone } = body;
@@ -12,6 +13,21 @@ export async function POST(request: NextRequest) {
         { error: 'Username, password, and confirm password are required' },
         { status: 400 }
       );
+    }
+
+    // Additional validation for spam prevention
+    if (username.length < 3 || username.length > 20) {
+      return NextResponse.json({ error: 'Username must be 3-20 characters' }, { status: 400 });
+    }
+
+    // Check for suspicious patterns
+    if (/^(test|admin|root|user|guest|demo)\d*$/i.test(username)) {
+      return NextResponse.json({ error: 'Username not allowed' }, { status: 400 });
+    }
+
+    // Check for sequential or repeated patterns
+    if (/(.)\1{3,}/.test(username) || /123|abc|qwe|asd/i.test(username)) {
+      return NextResponse.json({ error: 'Username contains invalid patterns' }, { status: 400 });
     }
 
     // Check password match
@@ -63,7 +79,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET(request: NextRequest) {
+async function handleUsernameCheck(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const username = searchParams.get('username');
@@ -83,3 +99,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+export const POST = withAuthSecurity(handleRegisterPOST);
+export const GET = withAuthSecurity(handleUsernameCheck);

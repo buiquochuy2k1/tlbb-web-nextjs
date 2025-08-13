@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Link from 'next/link';
 import { useState } from 'react';
+import { secureFetch } from '@/lib/api-security';
 import {
   Eye,
   EyeOff,
@@ -128,7 +129,7 @@ export function RegisterForm({ className, ...props }: React.ComponentProps<'div'
     }
 
     try {
-      const response = await fetch('/api/v1/auth/dangky', {
+      const response = await secureFetch('/api/v1/auth/dangky', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

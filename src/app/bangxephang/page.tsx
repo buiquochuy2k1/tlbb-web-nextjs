@@ -6,6 +6,7 @@ import { Trophy, Crown, Medal, Sword, Star, Search, Filter, Users, TrendingUp, H
 import { CharacterName } from '@/lib/character-name';
 import { AuthGuard } from '@/components/auth/auth-guard';
 import { ScrollToTop } from '@/components/ui/scroll-to-top';
+import { secureFetch } from '@/lib/api-security';
 import Link from 'next/link';
 
 interface RankingPlayer {
@@ -27,7 +28,7 @@ export default function BangXepHangPage() {
   useEffect(() => {
     const fetchRankings = async () => {
       try {
-        const response = await fetch('/api/v1/bangxephang');
+        const response = await secureFetch('/api/v1/bangxephang');
         if (response.ok) {
           const data = await response.json();
           console.log('Rankings API: Data received:', data);

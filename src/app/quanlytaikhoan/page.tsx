@@ -22,6 +22,7 @@ import { CharacterName } from '@/lib/character-name';
 import { AuthGuard } from '@/components/auth/auth-guard';
 import { ChangePasswordModal } from '@/components/modals/change-password-modal';
 import { ScrollToTop } from '@/components/ui/scroll-to-top';
+import { secureFetch } from '@/lib/api-security';
 
 interface UserCharacter {
   charname: string;
@@ -63,7 +64,7 @@ export default function QuanLyTaiKhoanPage() {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const response = await fetch('/api/v1/account/profile', {
+        const response = await secureFetch('/api/v1/account/profile', {
           credentials: 'include',
         });
 
@@ -202,13 +203,20 @@ export default function QuanLyTaiKhoanPage() {
                     <p className="text-white/80">Thông tin chi tiết về tài khoản của bạn</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3">
+                  <Link
+                    href="/napthe"
+                    className="hidden sm:flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 rounded-xl text-white font-semibold transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105"
+                  >
+                    <CircleDollarSign className="w-4 h-4" />
+                    <span>Nạp Bạc</span>
+                  </Link>
                   <button
                     onClick={() => setShowChangePasswordModal(true)}
-                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 rounded-xl text-white font-medium transition-all shadow-lg"
+                    className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 rounded-xl text-white font-semibold transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105"
                   >
                     <Shield className="w-4 h-4" />
-                    <span className="text-sm">Đổi mật khẩu</span>
+                    <span>Đổi Mật Khẩu</span>
                   </button>
                   <div className="hidden sm:flex items-center gap-2">
                     <div

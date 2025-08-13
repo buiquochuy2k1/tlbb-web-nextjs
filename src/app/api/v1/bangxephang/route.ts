@@ -1,6 +1,7 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getDbConnection2 } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
+import { withApiSecurity } from '@/lib/api-security';
 
 export interface RankingPlayer {
   rank: number;
@@ -8,7 +9,7 @@ export interface RankingPlayer {
   level: number;
 }
 
-export async function GET() {
+async function handleGetRankings(req: NextRequest) {
   try {
     const connection = await getDbConnection2();
 
@@ -37,3 +38,5 @@ export async function GET() {
     return NextResponse.json({ success: false, error: 'Failed to fetch rankings' }, { status: 500 });
   }
 }
+
+export const GET = withApiSecurity(handleGetRankings);

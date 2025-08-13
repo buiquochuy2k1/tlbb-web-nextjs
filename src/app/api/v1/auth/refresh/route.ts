@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { refreshAccessToken } from '@/lib/auth';
+import { withApiSecurity } from '@/lib/api-security';
 
-export async function POST(request: NextRequest) {
+async function handleRefreshToken(request: NextRequest) {
   try {
     // Get refresh token from HTTP-only cookie
     const refreshToken = request.cookies.get('refresh_token')?.value;
@@ -38,3 +39,5 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+export const POST = withApiSecurity(handleRefreshToken);

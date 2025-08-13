@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import Link from 'next/link';
 import { useState } from 'react';
 import { Eye, EyeOff, Lock, User, LogIn, Home, UserPlus } from 'lucide-react';
+import { secureFetch } from '@/lib/api-security';
 
 interface LoginFormData {
   ten: string; // Tên đăng nhập
@@ -36,11 +37,8 @@ export function LoginForm({ className, ...props }: React.ComponentProps<'div'>) 
     setMessage(null);
 
     try {
-      const response = await fetch('/api/v1/auth/dangnhap', {
+      const response = await secureFetch('/api/v1/auth/dangnhap', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({
           username: formData.ten,
           password: formData.mk,

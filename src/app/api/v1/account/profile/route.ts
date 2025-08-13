@@ -3,6 +3,7 @@ import { verifyAccessToken } from '@/lib/jwt';
 import { getUserById } from '@/lib/auth';
 import { getDbConnection2 } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
+import { withApiSecurity } from '@/lib/api-security';
 
 export interface UserCharacter {
   charname: string;
@@ -22,7 +23,7 @@ export interface UserProfile {
   characters: UserCharacter[];
 }
 
-export async function GET(request: NextRequest) {
+async function handleGetProfile(request: NextRequest) {
   try {
     // Get token from HTTP-only cookie
     const token = request.cookies.get('access_token')?.value;
@@ -80,3 +81,5 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+export const GET = withApiSecurity(handleGetProfile);

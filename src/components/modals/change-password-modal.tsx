@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { X, Eye, EyeOff, Lock, Shield, CheckCircle } from 'lucide-react';
+import { secureFetch } from '@/lib/api-security';
 
 interface ChangePasswordModalProps {
   isOpen: boolean;
@@ -26,12 +27,12 @@ export function ChangePasswordModal({ isOpen, onClose, onSuccess }: ChangePasswo
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
     setError(null);
   };
 
   const togglePasswordVisibility = (field: 'current' | 'new' | 'confirm') => {
-    setShowPasswords(prev => ({ ...prev, [field]: !prev[field] }));
+    setShowPasswords((prev) => ({ ...prev, [field]: !prev[field] }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -62,7 +63,7 @@ export function ChangePasswordModal({ isOpen, onClose, onSuccess }: ChangePasswo
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/v1/auth/change-password', {
+      const response = await secureFetch('/api/v1/auth/change-password', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -136,17 +137,13 @@ export function ChangePasswordModal({ isOpen, onClose, onSuccess }: ChangePasswo
             <div className="text-center py-8">
               <CheckCircle className="w-16 h-16 text-green-400 mx-auto mb-4" />
               <h3 className="text-lg font-bold text-white mb-2">Đổi mật khẩu thành công!</h3>
-              <p className="text-purple-200/80 text-sm">
-                Mật khẩu của bạn đã được cập nhật thành công.
-              </p>
+              <p className="text-purple-200/80 text-sm">Mật khẩu của bạn đã được cập nhật thành công.</p>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Current Password */}
               <div>
-                <label className="block text-purple-200 text-sm font-medium mb-2">
-                  Mật khẩu hiện tại
-                </label>
+                <label className="block text-purple-200 text-sm font-medium mb-2">Mật khẩu hiện tại</label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-purple-400" />
                   <input
@@ -170,9 +167,7 @@ export function ChangePasswordModal({ isOpen, onClose, onSuccess }: ChangePasswo
 
               {/* New Password */}
               <div>
-                <label className="block text-purple-200 text-sm font-medium mb-2">
-                  Mật khẩu mới
-                </label>
+                <label className="block text-purple-200 text-sm font-medium mb-2">Mật khẩu mới</label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-purple-400" />
                   <input
