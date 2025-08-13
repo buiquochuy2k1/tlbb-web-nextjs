@@ -13,13 +13,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Attempt login
-    const result = await loginUser(username, password);
+    const result = await loginUser(username, password, request);
 
     if (result) {
       const { user, accessToken, refreshToken } = result;
 
       // Remove sensitive information before sending response
-      const { password: _, token_version: __, ...userWithoutPassword } = user;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { password, token_version, ...userWithoutPassword } = user;
 
       // Create response
       const response = NextResponse.json({

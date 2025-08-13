@@ -31,15 +31,18 @@ export async function POST(request: NextRequest) {
     }
 
     // Register user
-    const success = await registerUser({
-      name: username,
-      password: password,
-      showpassword: password,
-      question: question || null,
-      answer: answer || null,
-      email: email || null,
-      sodienthoai: phone || '0',
-    });
+    const success = await registerUser(
+      {
+        name: username,
+        password: password,
+        showpassword: password,
+        question: question || null,
+        answer: answer || null,
+        email: email || null,
+        sodienthoai: phone || '0',
+      },
+      request
+    );
 
     if (success) {
       return NextResponse.json({

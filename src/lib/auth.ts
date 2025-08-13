@@ -2,6 +2,8 @@ import crypto from 'crypto';
 import { getDbConnection, Account } from './db';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
 import { signAccessToken, signRefreshToken, generateTokenVersion } from './jwt';
+import { getClientIP } from './ip-utils';
+import { NextRequest } from 'next/server';
 
 // Hash password using MD5 (to match your existing data)
 export function hashPassword(password: string): string {
@@ -17,7 +19,8 @@ export function verifyPassword(password: string, hashedPassword: string): boolea
 // Login function with JWT tokens
 export async function loginUser(
   username: string,
-  password: string
+  password: string,
+  request?: NextRequest
 ): Promise<{
   user: Account;
   accessToken: string;
@@ -40,7 +43,7 @@ export async function loginUser(
       // This will invalidate all previous tokens by updating token_version
       await connection.execute(
         'UPDATE account SET last_ip_login = ?, date_modified = NOW(), token_version = ? WHERE id = ?',
-        [getClientIP(), tokenVersion, user.id]
+        [getClientIPFromRequest(request), tokenVersion, user.id]
       );
 
       // Generate JWT tokens
@@ -73,16 +76,19 @@ export async function loginUser(
 }
 
 // Register function
-export async function registerUser(userData: {
-  name: string;
-  password: string;
-  password2?: string;
-  showpassword?: string;
-  question?: string;
-  answer?: string;
-  email?: string;
-  sodienthoai?: string;
-}): Promise<boolean> {
+export async function registerUser(
+  userData: {
+    name: string;
+    password: string;
+    password2?: string;
+    showpassword?: string;
+    question?: string;
+    answer?: string;
+    email?: string;
+    sodienthoai?: string;
+  },
+  request?: NextRequest
+): Promise<boolean> {
   try {
     const connection = await getDbConnection();
 
@@ -105,8 +111,8 @@ export async function registerUser(userData: {
         name, password, password2, showpassword, question, answer, email, 
         sodienthoai, point, is_online, is_lock, backhoa, score, pin, 
         is_admin, is_refer, code_game, id_type, date_registered, 
-        date_modified, created_on, modified_on
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        date_modified, created_on, modified_on, last_ip_login
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         userData.name,
         hashedPassword,
@@ -130,6 +136,7 @@ export async function registerUser(userData: {
         currentDate, // date_modified
         currentDate, // created_on
         currentDate, // modified_on
+        getClientIPFromRequest(request), // last_ip_login
       ]
     );
 
@@ -176,10 +183,12 @@ export async function getUserById(id: number): Promise<Account | null> {
   }
 }
 
-// Helper function to get client IP (you'll need to implement this based on your setup)
-function getClientIP(): string {
-  // This is a placeholder - you'll need to get the actual client IP
-  return '127.0.0.1';
+// Helper function to get client IP from request
+function getClientIPFromRequest(request?: NextRequest): string {
+  if (!request) {
+    return '127.0.0.1';
+  }
+  return getClientIP(request);
 }
 
 // Check if username is available
