@@ -21,6 +21,7 @@ import {
 import { CharacterName } from '@/lib/character-name';
 import { AuthGuard } from '@/components/auth/auth-guard';
 import { ChangePasswordModal } from '@/components/modals/change-password-modal';
+import { ScrollToTop } from '@/components/ui/scroll-to-top';
 
 interface UserCharacter {
   charname: string;
@@ -408,6 +409,9 @@ export default function QuanLyTaiKhoanPage() {
           console.log('Password changed successfully');
         }}
       />
+
+      {/* Scroll to Top Button */}
+      <ScrollToTop />
     </AuthGuard>
   );
 }

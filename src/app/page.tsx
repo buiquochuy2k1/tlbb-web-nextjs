@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { CharacterName } from '@/lib/character-name';
+import { ScrollToTop } from '@/components/ui/scroll-to-top';
 
 interface RankingPlayer {
   rank: number;
@@ -37,7 +38,7 @@ interface RankingPlayer {
 
 export default function HomePage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [showScrollTop, setShowScrollTop] = useState(false);
+
   const [user, setUser] = useState<{ id: number; name: string } | null>(null);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [rankings, setRankings] = useState<RankingPlayer[]>([]);
@@ -86,24 +87,6 @@ export default function HomePage() {
 
     fetchRankings();
   }, []);
-
-  // Show/hide scroll to top button based on scroll position
-  useEffect(() => {
-    const handleScroll = () => {
-      setShowScrollTop(window.scrollY > 300);
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  // Scroll to top function
-  const scrollToTop = () => {
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth',
-    });
-  };
 
   // Logout function
   const handleLogout = async () => {
@@ -864,21 +847,7 @@ export default function HomePage() {
       </div>
 
       {/* Scroll to Top Button */}
-      {showScrollTop && (
-        <button
-          onClick={scrollToTop}
-          className="fixed bottom-8 right-8 z-50 w-16 h-16 bg-transparent hover:scale-110 transition-all duration-300 animate__animated animate__fadeInUp"
-          aria-label="Scroll to top"
-        >
-          <Image
-            src="/assets/images/bg-backtotop.png"
-            alt="Back to Top"
-            width={64}
-            height={64}
-            className="w-full h-full object-contain drop-shadow-2xl hover:drop-shadow-3xl transition-all duration-300"
-          />
-        </button>
-      )}
+      <ScrollToTop />
     </main>
   );
 }
