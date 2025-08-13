@@ -8,74 +8,105 @@ interface DatabaseConfig {
   port?: number;
 }
 
-const dbConfig: DatabaseConfig = {
+// Base database configuration (shared settings)
+const baseDbConfig = {
   host: process.env.DATABASE_IP || '127.0.0.1',
   user: process.env.DATABASE_ACCOUNT || 'root',
   password: process.env.DATABASE_PASS || '',
-  database: process.env.DATABASE_NAME || 'web',
   port: 3306,
 };
 
-let connection: mysql.Connection | null = null;
+// Database configurations (only database names differ)
+const dbConfigs = {
+  web: {
+    ...baseDbConfig,
+    database: process.env.DATABASE_NAME || 'web',
+  } as DatabaseConfig,
 
-export async function getDbConnection(): Promise<mysql.Connection> {
-  if (!connection) {
+  tlbbdb: {
+    ...baseDbConfig,
+    database: process.env.DATABASE2_NAME || 'tlbbdb',
+  } as DatabaseConfig,
+};
+
+// Connection pool
+const connections: { [key: string]: mysql.Connection | null } = {
+  web: null,
+  tlbbdb: null,
+};
+
+/**
+ * Generic database connection function
+ */
+async function getConnection(dbName: keyof typeof dbConfigs): Promise<mysql.Connection> {
+  if (!connections[dbName]) {
     try {
-      connection = await mysql.createConnection(dbConfig);
-      // console.log('Database connected successfully');
+      connections[dbName] = await mysql.createConnection(dbConfigs[dbName]);
+      console.log(`✅ Database ${dbName} connected successfully`);
     } catch (error) {
-      console.error('Database connection failed:', error);
-      throw new Error('Failed to connect to database');
+      console.error(`❌ Database ${dbName} connection failed:`, error);
+      throw new Error(`Failed to connect to database ${dbName}`);
     }
   }
-  return connection;
+  return connections[dbName]!;
+}
+
+/**
+ * Create a new database connection with custom database name
+ * Useful for dynamic database connections
+ */
+export async function createDbConnection(databaseName: string): Promise<mysql.Connection> {
+  try {
+    const config = {
+      ...baseDbConfig,
+      database: databaseName,
+    };
+    const connection = await mysql.createConnection(config);
+    console.log(`✅ Custom database ${databaseName} connected successfully`);
+    return connection;
+  } catch (error) {
+    console.error(`❌ Custom database ${databaseName} connection failed:`, error);
+    throw new Error(`Failed to connect to database ${databaseName}`);
+  }
+}
+
+/**
+ * Close specific database connection
+ */
+async function closeConnection(dbName: keyof typeof dbConfigs): Promise<void> {
+  if (connections[dbName]) {
+    try {
+      await connections[dbName]!.end();
+      connections[dbName] = null;
+      console.log(`🔌 Database ${dbName} connection closed`);
+    } catch (error) {
+      console.error(`❌ Error closing ${dbName} connection:`, error);
+    }
+  }
+}
+
+/**
+ * Close all database connections
+ */
+export async function closeAllConnections(): Promise<void> {
+  await Promise.all([closeConnection('web'), closeConnection('tlbbdb')]);
+}
+
+// Specific connection functions for backward compatibility
+export async function getDbConnection(): Promise<mysql.Connection> {
+  return getConnection('web');
+}
+
+export async function getDbConnection2(): Promise<mysql.Connection> {
+  return getConnection('tlbbdb');
 }
 
 export async function closeDbConnection(): Promise<void> {
-  if (connection) {
-    await connection.end();
-    connection = null;
-    // console.log('Database connection closed');
-  }
-}
-
-interface DatabaseConfig {
-  host: string;
-  user: string;
-  password: string;
-  database: string;
-  port?: number;
-}
-
-const db2Config: DatabaseConfig = {
-  host: process.env.DATABASE_IP || '127.0.0.1',
-  user: process.env.DATABASE_ACCOUNT || 'root',
-  password: process.env.DATABASE_PASS || '',
-  database: process.env.DATABASE2_NAME || 'tlbbdb',
-  port: 3306,
-};
-
-let connection2: mysql.Connection | null = null;
-
-export async function getDbConnection2(): Promise<mysql.Connection> {
-  if (!connection2) {
-    try {
-      connection2 = await mysql.createConnection(db2Config);
-      // console.log('Database 2 connected successfully');
-    } catch (error) {
-      console.error('Database 2 connection failed:', error);
-      throw new Error('Failed to connect to database 2');
-    }
-  }
-  return connection2;
+  return closeConnection('web');
 }
 
 export async function closeDbConnection2(): Promise<void> {
-  if (connection2) {
-    await connection2.end();
-    connection2 = null;
-    // console.log('Database 2 connection closed');
-  }
+  return closeConnection('tlbbdb');
 }
 
 // Account interface based on your database schema
