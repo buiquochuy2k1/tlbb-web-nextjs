@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAccessToken } from '@/lib/jwt';
 import { getUserById } from '@/lib/auth';
-import { getDbConnection } from '@/lib/db';
+import { query } from '@/lib/db';
 import crypto from 'crypto';
 import { withApiSecurity } from '@/lib/api-security';
 
@@ -73,8 +73,7 @@ async function handleChangePassword(request: NextRequest) {
     }
 
     // Update password in database
-    const connection = await getDbConnection();
-    await connection.execute('UPDATE account SET password = ?, date_modified = NOW() WHERE id = ?', [
+    await query('web', 'UPDATE account SET password = ?, date_modified = NOW() WHERE id = ?', [
       newPasswordHash,
       user.id,
     ]);

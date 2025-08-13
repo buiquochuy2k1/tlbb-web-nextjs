@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDbConnection2 } from '@/lib/db';
-import { RowDataPacket } from 'mysql2';
+import { query } from '@/lib/db';
 import { withApiSecurity } from '@/lib/api-security';
 
 export interface RankingPlayer {
@@ -11,22 +10,16 @@ export interface RankingPlayer {
 
 async function handleGetRankings(req: NextRequest) {
   try {
-    const connection = await getDbConnection2();
-
-    // Execute the ranking query
-    const [rows] = await connection.execute<RowDataPacket[]>(
-      `SELECT charname, level
-       FROM t_char 
-       WHERE charname NOT LIKE '%DELETE%'
-       ORDER BY level DESC
-       LIMIT 50`
+    const rows = await query(
+      'tlbbdb',
+      `SELECT charname, level FROM t_char WHERE charname NOT LIKE '%DELETE%' ORDER BY level DESC LIMIT 50`
     );
 
     // Add rank numbers to the results
-    const rankings: RankingPlayer[] = rows.map((row, index) => ({
+    const rankings: RankingPlayer[] = (rows as RankingPlayer[]).map((row, index) => ({
       rank: index + 1,
       charname: row.charname,
-      level: row.level,
+      level: row.level || 0,
     }));
 
     return NextResponse.json({

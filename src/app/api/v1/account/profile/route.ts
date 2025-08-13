@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAccessToken } from '@/lib/jwt';
 import { getUserById } from '@/lib/auth';
-import { getDbConnection2 } from '@/lib/db';
-import { RowDataPacket } from 'mysql2';
+import { query } from '@/lib/db';
 import { withApiSecurity } from '@/lib/api-security';
 
 export interface UserCharacter {
@@ -44,16 +43,13 @@ async function handleGetProfile(request: NextRequest) {
     }
 
     // Get user characters
-    const connection = await getDbConnection2();
-    const [characterRows] = await connection.execute<RowDataPacket[]>(
-      `SELECT charname, level, yuanbao, exp, uipoint
-       FROM t_char 
-       WHERE accname = ? AND charname NOT LIKE '%DELETE%'
-       ORDER BY level DESC`,
+    const characterRows = await query(
+      'tlbbdb',
+      `SELECT charname, level, yuanbao, exp, uipoint FROM t_char WHERE accname = ? AND charname NOT LIKE '%DELETE%' ORDER BY level DESC`,
       [user.name]
     );
 
-    const characters: UserCharacter[] = characterRows.map((row) => ({
+    const characters: UserCharacter[] = (characterRows as UserCharacter[]).map((row) => ({
       charname: row.charname,
       level: row.level || 1,
       yuanbao: row.yuanbao || 0,

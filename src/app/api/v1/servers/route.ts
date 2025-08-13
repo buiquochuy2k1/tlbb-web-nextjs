@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDbConnection } from '@/lib/db';
+import { query } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
 import { withApiSecurity } from '@/lib/api-security';
 
@@ -11,19 +11,13 @@ interface Server {
 
 async function handleGetServers(req: NextRequest) {
   try {
-    const connection = await getDbConnection();
+    const rows = await query('web', `SELECT id, name, status FROM server ORDER BY id ASC`);
 
-    const [rows] = await connection.execute<RowDataPacket[]>(
-      `SELECT name, status FROM server ORDER BY id ASC`
-    );
-
-    const servers: Server[] = rows.map((row) => ({
+    const servers: Server[] = (rows as Server[]).map((row) => ({
       id: row.id || 0,
       name: row.name,
       status: row.status || 'offline',
     }));
-
-    await connection.end();
 
     return NextResponse.json({
       success: true,

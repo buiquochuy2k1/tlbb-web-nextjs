@@ -57,9 +57,8 @@ export default function HomePage() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const response = await secureFetch('/api/v1/auth/me', {
+        const response = await fetch('/api/v1/auth/me', {
           method: 'GET',
-          credentials: 'include', // Include cookies
         });
 
         if (response.ok) {

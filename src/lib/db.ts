@@ -28,7 +28,7 @@ const dbConfigs = {
 };
 
 // Create connection pools (auto-manage connections)
-const pools: { [key: string]: mysql.Pool } = {
+export const pools: { [key: string]: mysql.Pool } = {
   web: mysql.createPool({
     ...dbConfigs.web,
     waitForConnections: true,
@@ -44,15 +44,14 @@ const pools: { [key: string]: mysql.Pool } = {
 };
 
 /**
- * Generic function to get a connection from pool
+ * Generic function to run a query
  */
-async function getConnection(dbName: keyof typeof pools): Promise<mysql.PoolConnection> {
+export async function query(dbName: keyof typeof pools, sql: string, params?: unknown[]) {
   try {
-    const connection = await pools[dbName].getConnection();
-    console.log(`✅ Database ${dbName} connection acquired`);
-    return connection;
+    const [rows] = await pools[dbName].query(sql, params);
+    return rows;
   } catch (error) {
-    console.error(`❌ Failed to get connection from pool for ${dbName}:`, error);
+    console.error(`❌ Query failed on ${dbName}:`, error);
     throw error;
   }
 }
@@ -74,23 +73,6 @@ async function closePool(dbName: keyof typeof pools): Promise<void> {
  */
 export async function closeAllConnections(): Promise<void> {
   await Promise.all([closePool('web'), closePool('tlbbdb')]);
-}
-
-// Specific connection functions for backward compatibility
-export async function getDbConnection(): Promise<mysql.PoolConnection> {
-  return getConnection('web');
-}
-
-export async function getDbConnection2(): Promise<mysql.PoolConnection> {
-  return getConnection('tlbbdb');
-}
-
-export async function closeDbConnection(): Promise<void> {
-  return closePool('web');
-}
-
-export async function closeDbConnection2(): Promise<void> {
-  return closePool('tlbbdb');
 }
 
 // Account interface based on your database schema
