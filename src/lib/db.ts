@@ -8,105 +8,89 @@ interface DatabaseConfig {
   port?: number;
 }
 
-// Base database configuration (shared settings)
-const baseDbConfig = {
-  host: process.env.DATABASE_IP || '127.0.0.1',
-  user: process.env.DATABASE_ACCOUNT || 'root',
-  password: process.env.DATABASE_PASS || '',
-  port: 3306,
-};
-
-// Database configurations (only database names differ)
+// Database configurations
 const dbConfigs = {
   web: {
-    ...baseDbConfig,
+    host: process.env.DATABASE_IP || '127.0.0.1',
+    user: process.env.DATABASE_ACCOUNT || 'root',
+    password: process.env.DATABASE_PASS || '',
     database: process.env.DATABASE_NAME || 'web',
+    port: 3306,
   } as DatabaseConfig,
 
   tlbbdb: {
-    ...baseDbConfig,
+    host: process.env.DATABASE_IP || '127.0.0.1',
+    user: process.env.DATABASE_ACCOUNT || 'root',
+    password: process.env.DATABASE_PASS || '',
     database: process.env.DATABASE2_NAME || 'tlbbdb',
+    port: 3306,
   } as DatabaseConfig,
 };
 
-// Connection pool
-const connections: { [key: string]: mysql.Connection | null } = {
-  web: null,
-  tlbbdb: null,
+// Create connection pools (auto-manage connections)
+const pools: { [key: string]: mysql.Pool } = {
+  web: mysql.createPool({
+    ...dbConfigs.web,
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0,
+  }),
+  tlbbdb: mysql.createPool({
+    ...dbConfigs.tlbbdb,
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0,
+  }),
 };
 
 /**
- * Generic database connection function
+ * Generic function to get a connection from pool
  */
-async function getConnection(dbName: keyof typeof dbConfigs): Promise<mysql.Connection> {
-  if (!connections[dbName]) {
-    try {
-      connections[dbName] = await mysql.createConnection(dbConfigs[dbName]);
-      console.log(`✅ Database ${dbName} connected successfully`);
-    } catch (error) {
-      console.error(`❌ Database ${dbName} connection failed:`, error);
-      throw new Error(`Failed to connect to database ${dbName}`);
-    }
-  }
-  return connections[dbName]!;
-}
-
-/**
- * Create a new database connection with custom database name
- * Useful for dynamic database connections
- */
-export async function createDbConnection(databaseName: string): Promise<mysql.Connection> {
+async function getConnection(dbName: keyof typeof pools): Promise<mysql.PoolConnection> {
   try {
-    const config = {
-      ...baseDbConfig,
-      database: databaseName,
-    };
-    const connection = await mysql.createConnection(config);
-    console.log(`✅ Custom database ${databaseName} connected successfully`);
+    const connection = await pools[dbName].getConnection();
+    console.log(`✅ Database ${dbName} connection acquired`);
     return connection;
   } catch (error) {
-    console.error(`❌ Custom database ${databaseName} connection failed:`, error);
-    throw new Error(`Failed to connect to database ${databaseName}`);
+    console.error(`❌ Failed to get connection from pool for ${dbName}:`, error);
+    throw error;
   }
 }
 
 /**
- * Close specific database connection
+ * Close specific pool (only if really needed)
  */
-async function closeConnection(dbName: keyof typeof dbConfigs): Promise<void> {
-  if (connections[dbName]) {
-    try {
-      await connections[dbName]!.end();
-      connections[dbName] = null;
-      console.log(`🔌 Database ${dbName} connection closed`);
-    } catch (error) {
-      console.error(`❌ Error closing ${dbName} connection:`, error);
-    }
+async function closePool(dbName: keyof typeof pools): Promise<void> {
+  try {
+    await pools[dbName].end();
+    console.log(`🔌 Database ${dbName} pool closed`);
+  } catch (error) {
+    console.error(`❌ Error closing pool for ${dbName}:`, error);
   }
 }
 
 /**
- * Close all database connections
+ * Close all pools
  */
 export async function closeAllConnections(): Promise<void> {
-  await Promise.all([closeConnection('web'), closeConnection('tlbbdb')]);
+  await Promise.all([closePool('web'), closePool('tlbbdb')]);
 }
 
 // Specific connection functions for backward compatibility
-export async function getDbConnection(): Promise<mysql.Connection> {
+export async function getDbConnection(): Promise<mysql.PoolConnection> {
   return getConnection('web');
 }
 
-export async function getDbConnection2(): Promise<mysql.Connection> {
+export async function getDbConnection2(): Promise<mysql.PoolConnection> {
   return getConnection('tlbbdb');
 }
 
 export async function closeDbConnection(): Promise<void> {
-  return closeConnection('web');
+  return closePool('web');
 }
 
 export async function closeDbConnection2(): Promise<void> {
-  return closeConnection('tlbbdb');
+  return closePool('tlbbdb');
 }
 
 // Account interface based on your database schema
