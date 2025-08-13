@@ -1,14 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-// Internal API key for server-to-server communication
+// Internal API key for server-to-server communication (server-only)
 const INTERNAL_API_KEY = process.env.INTERNAL_API_KEY || 'tlbb-internal-key-2050';
 
+// Client-side API key (can be public, less secure but functional)
+const CLIENT_API_KEY = process.env.NEXT_PUBLIC_CLIENT_API_KEY || 'tlbb-client-key-2050';
+
 // Allowed origins for API access
-const ALLOWED_ORIGINS = [
-  process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
-  'http://localhost:3000',
-  'https://localhost:3000',
-];
+const getAllowedOrigins = () => {
+  const origins = ['http://localhost:3000', 'https://localhost:3000'];
+
+  // Add custom domain if specified
+  if (process.env.NEXT_PUBLIC_APP_URL) {
+    origins.push(process.env.NEXT_PUBLIC_APP_URL);
+  }
+
+  return origins;
+};
+
+const ALLOWED_ORIGINS = getAllowedOrigins();
 
 /**
  * Middleware to protect internal APIs from external access
@@ -16,9 +26,11 @@ const ALLOWED_ORIGINS = [
 export function withApiSecurity(handler: (req: NextRequest) => Promise<NextResponse>) {
   return async (req: NextRequest) => {
     try {
-      // Check 1: Verify internal API key
+      // Check 1: Verify API key (accept both internal and client keys)
       const apiKey = req.headers.get('x-api-key');
-      if (!apiKey || apiKey !== INTERNAL_API_KEY) {
+      const isValidApiKey = apiKey && (apiKey === INTERNAL_API_KEY || apiKey === CLIENT_API_KEY);
+
+      if (!isValidApiKey) {
         return NextResponse.json(
           {
             success: false,
@@ -28,25 +40,51 @@ export function withApiSecurity(handler: (req: NextRequest) => Promise<NextRespo
         );
       }
 
-      // Check 2: Verify origin/referer
+      // Check 2: Verify origin/referer (more lenient for development)
       const origin = req.headers.get('origin');
       const referer = req.headers.get('referer');
 
-      const isValidOrigin =
-        origin &&
-        ALLOWED_ORIGINS.some((allowedOrigin) => origin === allowedOrigin || origin.startsWith(allowedOrigin));
+      // In development, be more lenient
+      const isDevelopment = process.env.NODE_ENV === 'development';
 
-      const isValidReferer =
-        referer && ALLOWED_ORIGINS.some((allowedOrigin) => referer.startsWith(allowedOrigin));
+      if (isDevelopment) {
+        // Allow localhost origins in development
+        const isLocalhost = origin?.includes('localhost') || referer?.includes('localhost');
+        if (!isLocalhost && origin && referer) {
+          const isValidOrigin = ALLOWED_ORIGINS.some(
+            (allowedOrigin) => origin === allowedOrigin || origin.startsWith(allowedOrigin)
+          );
+          const isValidReferer = ALLOWED_ORIGINS.some((allowedOrigin) => referer.startsWith(allowedOrigin));
 
-      if (!isValidOrigin && !isValidReferer) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: 'Invalid origin',
-          },
-          { status: 403 }
-        );
+          if (!isValidOrigin && !isValidReferer) {
+            return NextResponse.json(
+              {
+                success: false,
+                error: 'Invalid origin',
+              },
+              { status: 403 }
+            );
+          }
+        }
+      } else {
+        // Production - stricter validation
+        const isValidOrigin =
+          origin &&
+          ALLOWED_ORIGINS.some(
+            (allowedOrigin) => origin === allowedOrigin || origin.startsWith(allowedOrigin)
+          );
+        const isValidReferer =
+          referer && ALLOWED_ORIGINS.some((allowedOrigin) => referer.startsWith(allowedOrigin));
+
+        if (!isValidOrigin && !isValidReferer) {
+          return NextResponse.json(
+            {
+              success: false,
+              error: 'Invalid origin',
+            },
+            { status: 403 }
+          );
+        }
       }
 
       // Check 3: Rate limiting (simple implementation)
@@ -84,7 +122,7 @@ export function withApiSecurity(handler: (req: NextRequest) => Promise<NextRespo
 export function createSecureHeaders(): HeadersInit {
   return {
     'Content-Type': 'application/json',
-    'x-api-key': INTERNAL_API_KEY,
+    'x-api-key': CLIENT_API_KEY, // Use client API key for frontend
     'x-requested-with': 'XMLHttpRequest',
   };
 }
@@ -113,9 +151,11 @@ const rateLimitMap = new Map<string, { count: number; lastReset: number }>();
 export function withAuthSecurity(handler: (req: NextRequest) => Promise<NextResponse>) {
   return async (req: NextRequest) => {
     try {
-      // Check 1: API Key (same as private APIs)
+      // Check 1: API Key (accept both internal and client keys)
       const apiKey = req.headers.get('x-api-key');
-      if (!apiKey || apiKey !== INTERNAL_API_KEY) {
+      const isValidApiKey = apiKey && (apiKey === INTERNAL_API_KEY || apiKey === CLIENT_API_KEY);
+
+      if (!isValidApiKey) {
         return NextResponse.json(
           {
             success: false,

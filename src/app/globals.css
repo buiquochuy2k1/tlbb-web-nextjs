@@ -178,4 +178,64 @@
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     background: rgba(245, 158, 11, 0.7);
   }
+
+  /* Sakura effect styles */
+  .sakura {
+    pointer-events: none;
+    position: absolute;
+    z-index: 1;
+    border-radius: 10px;
+    transform-origin: 50% 50%;
+    animation: sakura-fall linear infinite;
+    opacity: 0.8;
+    filter: blur(0.5px);
+  }
+
+  @keyframes sakura-fall {
+    0% {
+      transform: translateY(-100vh) rotate(0deg);
+      opacity: 0;
+    }
+    10% {
+      opacity: 0.8;
+    }
+    90% {
+      opacity: 0.8;
+    }
+    100% {
+      transform: translateY(100vh) rotate(360deg);
+      opacity: 0;
+    }
+  }
+
+  /* Additional floating animation for variety */
+  .sakura:nth-child(odd) {
+    animation: sakura-fall-swing linear infinite;
+  }
+
+  @keyframes sakura-fall-swing {
+    0% {
+      transform: translateY(-100vh) translateX(0) rotate(0deg);
+      opacity: 0;
+    }
+    10% {
+      opacity: 0.8;
+    }
+    25% {
+      transform: translateY(-50vh) translateX(10px) rotate(90deg);
+    }
+    50% {
+      transform: translateY(0vh) translateX(-10px) rotate(180deg);
+    }
+    75% {
+      transform: translateY(50vh) translateX(10px) rotate(270deg);
+    }
+    90% {
+      opacity: 0.8;
+    }
+    100% {
+      transform: translateY(100vh) translateX(0) rotate(360deg);
+      opacity: 0;
+    }
+  }
 }
