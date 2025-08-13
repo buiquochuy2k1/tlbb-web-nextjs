@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { loginUser } from '@/lib/auth';
 import { createTokenCookies } from '@/lib/middleware';
-import { withAuthSecurity } from '@/lib/api-security';
+import { withApiSecurity } from '@/lib/api-security';
 
 async function handleLogin(request: NextRequest) {
   try {
@@ -13,8 +13,8 @@ async function handleLogin(request: NextRequest) {
       return NextResponse.json({ error: 'Username and password are required' }, { status: 400 });
     }
 
-    // Additional validation for spam prevention
-    if (username.length < 3 || username.length > 20 || password.length < 6) {
+    // Basic validation
+    if (username.length < 3 || password.length < 6) {
       return NextResponse.json({ error: 'Invalid credentials format' }, { status: 400 });
     }
 
@@ -51,4 +51,4 @@ async function handleLogin(request: NextRequest) {
   }
 }
 
-export const POST = withAuthSecurity(handleLogin);
+export const POST = withApiSecurity(handleLogin);

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { registerUser, isUsernameAvailable } from '@/lib/auth';
-import { withAuthSecurity } from '@/lib/api-security';
+import { withApiSecurity } from '@/lib/api-security';
 
 async function handleRegisterPOST(request: NextRequest) {
   try {
@@ -15,19 +15,9 @@ async function handleRegisterPOST(request: NextRequest) {
       );
     }
 
-    // Additional validation for spam prevention
+    // Basic validation
     if (username.length < 3 || username.length > 20) {
       return NextResponse.json({ error: 'Username must be 3-20 characters' }, { status: 400 });
-    }
-
-    // Check for suspicious patterns
-    if (/^(test|admin|root|user|guest|demo)\d*$/i.test(username)) {
-      return NextResponse.json({ error: 'Username not allowed' }, { status: 400 });
-    }
-
-    // Check for sequential or repeated patterns
-    if (/(.)\1{3,}/.test(username) || /123|abc|qwe|asd/i.test(username)) {
-      return NextResponse.json({ error: 'Username contains invalid patterns' }, { status: 400 });
     }
 
     // Check password match
@@ -100,5 +90,5 @@ async function handleUsernameCheck(request: NextRequest) {
   }
 }
 
-export const POST = withAuthSecurity(handleRegisterPOST);
-export const GET = withAuthSecurity(handleUsernameCheck);
+export const POST = withApiSecurity(handleRegisterPOST);
+export const GET = withApiSecurity(handleUsernameCheck);
