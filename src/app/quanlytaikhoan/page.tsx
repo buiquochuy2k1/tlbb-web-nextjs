@@ -413,7 +413,6 @@ export default function QuanLyTaiKhoanPage() {
         isOpen={showChangePasswordModal}
         onClose={() => setShowChangePasswordModal(false)}
         onSuccess={() => {
-          // Optionally refresh profile data or show success message
           console.log('Password changed successfully');
         }}
       />

@@ -39,13 +39,13 @@ export function CharacterName({ charname, className }: CharacterNameProps) {
  * - NormalPlayer (no color code)
  */
 export function parseCharacterName(charname: string): ParsedCharacterName {
-  console.log('Parsing character name:', charname);
+  // console.log('Parsing character name:', charname);
 
   // Format 1: Hex color code like #rrggbb#Y Name or #rrggbb#-09 Name (PRIORITY)
   const hexColorMatch = charname.match(/^#([0-9a-fA-F]{6,8})#([-\w]+)\s*(.+)$/);
   if (hexColorMatch) {
     const [, colorHex, , name] = hexColorMatch;
-    console.log('Hex color match:', { colorHex, name });
+    // console.log('Hex color match:', { colorHex, name });
     return {
       name: name.trim(),
       color: `#${colorHex.slice(0, 6)}`, // Use first 6 chars for color
@@ -56,7 +56,7 @@ export function parseCharacterName(charname: string): ParsedCharacterName {
   const multiCodeMatch = charname.match(/^((?:#[a-zA-Z]){2,})\s*(.+)$/);
   if (multiCodeMatch) {
     const [, codes, name] = multiCodeMatch;
-    console.log('Multi-code match:', { codes, name });
+    // console.log('Multi-code match:', { codes, name });
 
     // Extract color codes and convert to color
     const colorCodes = codes.match(/#([a-zA-Z])/g);
@@ -64,7 +64,7 @@ export function parseCharacterName(charname: string): ParsedCharacterName {
       // Use first color code
       const firstCode = colorCodes[0].replace('#', '').toLowerCase();
       const color = getColorFromCode(firstCode);
-      console.log('Color from code:', { firstCode, color });
+      // console.log('Color from code:', { firstCode, color });
 
       return {
         name: name.trim(),
@@ -78,14 +78,14 @@ export function parseCharacterName(charname: string): ParsedCharacterName {
   if (simpleMatch) {
     const [, code, name] = simpleMatch;
     const color = getColorFromCode(code.toLowerCase());
-    console.log('Simple match:', { code, name, color });
+    // console.log('Simple match:', { code, name, color });
     return {
       name: name.trim(),
       color: color,
     };
   }
 
-  console.log('No color code found, returning original name');
+  // console.log('No color code found, returning original name');
   // If no color code, return original name
   return { name: charname };
 }

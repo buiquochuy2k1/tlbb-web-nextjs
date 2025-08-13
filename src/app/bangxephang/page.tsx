@@ -31,7 +31,6 @@ export default function BangXepHangPage() {
         const response = await secureFetch('/api/v1/bangxephang');
         if (response.ok) {
           const data = await response.json();
-          console.log('Rankings API: Data received:', data);
           setRankings(data.data || []);
         }
       } catch (error) {

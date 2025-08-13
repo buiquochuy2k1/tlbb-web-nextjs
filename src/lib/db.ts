@@ -22,7 +22,7 @@ export async function getDbConnection(): Promise<mysql.Connection> {
   if (!connection) {
     try {
       connection = await mysql.createConnection(dbConfig);
-      console.log('Database connected successfully');
+      // console.log('Database connected successfully');
     } catch (error) {
       console.error('Database connection failed:', error);
       throw new Error('Failed to connect to database');
@@ -35,7 +35,7 @@ export async function closeDbConnection(): Promise<void> {
   if (connection) {
     await connection.end();
     connection = null;
-    console.log('Database connection closed');
+    // console.log('Database connection closed');
   }
 }
 
@@ -61,7 +61,7 @@ export async function getDbConnection2(): Promise<mysql.Connection> {
   if (!connection2) {
     try {
       connection2 = await mysql.createConnection(db2Config);
-      console.log('Database 2 connected successfully');
+      // console.log('Database 2 connected successfully');
     } catch (error) {
       console.error('Database 2 connection failed:', error);
       throw new Error('Failed to connect to database 2');
@@ -74,7 +74,7 @@ export async function closeDbConnection2(): Promise<void> {
   if (connection2) {
     await connection2.end();
     connection2 = null;
-    console.log('Database 2 connection closed');
+    // console.log('Database 2 connection closed');
   }
 }
 
