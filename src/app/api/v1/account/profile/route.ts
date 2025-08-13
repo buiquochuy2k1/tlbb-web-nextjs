@@ -9,7 +9,6 @@ export interface UserCharacter {
   level: number;
   yuanbao: number;
   exp: number;
-  uipoint: number;
 }
 
 export interface UserProfile {
@@ -17,6 +16,7 @@ export interface UserProfile {
   name: string;
   email?: string;
   is_online: boolean;
+  point: number;
   date_registered?: Date;
   last_ip_login?: string;
   characters: UserCharacter[];
@@ -45,7 +45,7 @@ async function handleGetProfile(request: NextRequest) {
     // Get user characters
     const characterRows = await query(
       'tlbbdb',
-      `SELECT charname, level, yuanbao, exp, uipoint FROM t_char WHERE accname = ? AND charname NOT LIKE '%DELETE%' ORDER BY level DESC`,
+      `SELECT charname, level, yuanbao, exp FROM t_char WHERE accname = ? AND charname NOT LIKE '%DELETE%' ORDER BY level DESC`,
       [user.name]
     );
 
@@ -54,7 +54,6 @@ async function handleGetProfile(request: NextRequest) {
       level: row.level || 1,
       yuanbao: row.yuanbao || 0,
       exp: row.exp || 0,
-      uipoint: row.uipoint || 0,
     }));
 
     // Remove sensitive information and ensure required fields
@@ -63,6 +62,7 @@ async function handleGetProfile(request: NextRequest) {
       name: user.name,
       email: user.email,
       is_online: user.is_online || false,
+      point: user.point || 0,
       date_registered: user.date_registered,
       last_ip_login: user.last_ip_login,
       characters,

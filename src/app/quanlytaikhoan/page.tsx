@@ -28,7 +28,6 @@ interface UserCharacter {
   charname: string;
   level: number;
   yuanbao: number;
-  uipoint: number;
   exp: number;
 }
 
@@ -37,6 +36,7 @@ interface UserProfile {
   name: string;
   email?: string;
   is_online: boolean;
+  point: number;
   date_registered?: Date;
   last_ip_login?: string;
   characters: UserCharacter[];
@@ -291,7 +291,7 @@ export default function QuanLyTaiKhoanPage() {
                     {selectedCharacter ? (
                       <div>
                         <p className="text-yellow-400 font-bold text-lg">
-                          {selectedCharacter.uipoint?.toLocaleString()} Bạc
+                          {profile?.point?.toLocaleString()} Bạc
                         </p>
                       </div>
                     ) : (
