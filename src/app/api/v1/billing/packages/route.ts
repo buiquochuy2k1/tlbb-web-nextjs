@@ -15,7 +15,7 @@ interface BillingPackage {
   description: string | null;
 }
 
-async function GET(request: NextRequest) {
+async function getHandler(request: NextRequest) {
   try {
     // Get all active packages ordered by sort_order
     const packages = (await query(
@@ -66,8 +66,5 @@ async function GET(request: NextRequest) {
   }
 }
 
-export const dynamic = 'force-dynamic';
-
 // Apply API security and export
-export const GET_HANDLER = withApiSecurity(GET);
-export { GET_HANDLER as GET };
+export const GET = withApiSecurity(getHandler);
