@@ -23,6 +23,7 @@ import { AuthGuard } from '@/components/auth/auth-guard';
 import { ChangePasswordModal } from '@/components/modals/change-password-modal';
 import { ScrollToTop } from '@/components/ui/scroll-to-top';
 import { secureFetch } from '@/lib/api-security';
+import { toast } from 'sonner';
 
 interface UserCharacter {
   charname: string;
@@ -413,7 +414,7 @@ export default function QuanLyTaiKhoanPage() {
         isOpen={showChangePasswordModal}
         onClose={() => setShowChangePasswordModal(false)}
         onSuccess={() => {
-          console.log('Password changed successfully');
+          toast.success('Password changed successfully');
         }}
       />
 

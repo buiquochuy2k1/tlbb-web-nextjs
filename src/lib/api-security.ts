@@ -142,6 +142,7 @@ export function createSecureHeaders(): HeadersInit {
 export async function secureFetch(url: string, options: RequestInit = {}) {
   const secureOptions: RequestInit = {
     ...options,
+    credentials: 'include', // Include cookies for authentication
     headers: {
       ...createSecureHeaders(),
       ...options.headers,
