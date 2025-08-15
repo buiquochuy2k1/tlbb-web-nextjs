@@ -506,7 +506,7 @@ export default function NapThePage() {
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-300">Số tài khoản:</span>
-                        <span className="text-white font-semibold">088888666660</span>
+                        <span className="text-white font-semibold">{process.env.BANK_ACCOUNT_NO}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-300">Số tiền:</span>
