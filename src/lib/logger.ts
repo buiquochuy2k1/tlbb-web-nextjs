@@ -33,7 +33,6 @@ class Logger {
   constructor() {
     // Create logs directory in project root
     this.logDir = path.join(process.cwd(), 'logs');
-    this.ensureLogDirectory();
   }
 
   private ensureLogDirectory(): void {
@@ -73,6 +72,8 @@ class Logger {
 
   private writeToFile(entry: LogEntry): void {
     try {
+      this.ensureLogDirectory();
+
       const now = new Date();
       const fileName = this.getLogFileName(now);
       const filePath = path.join(this.logDir, fileName);
