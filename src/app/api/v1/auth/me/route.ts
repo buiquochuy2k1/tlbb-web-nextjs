@@ -3,7 +3,7 @@ import { verifyAccessToken } from '@/lib/jwt';
 import { getUserById } from '@/lib/auth';
 import { withApiSecurity } from '@/lib/api-security';
 
-export async function handleAuthMe(request: NextRequest) {
+async function handleAuthMe(request: NextRequest) {
   try {
     // Get token from HTTP-only cookie
     const token = request.cookies.get('access_token')?.value;
