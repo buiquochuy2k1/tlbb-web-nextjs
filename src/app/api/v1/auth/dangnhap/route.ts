@@ -2,20 +2,22 @@ import { NextRequest, NextResponse } from 'next/server';
 import { loginUser } from '@/lib/auth';
 import { createTokenCookies } from '@/lib/middleware';
 import { withApiSecurity } from '@/lib/api-security';
+import { loginSchema, getVietnameseErrorMessage } from '@/lib/validation/auth';
+import { ZodError } from 'zod';
 
 async function handleLogin(request: NextRequest) {
   try {
     const body = await request.json();
     const { username, password } = body;
 
-    // Validate input
-    if (!username || !password) {
-      return NextResponse.json({ error: 'Username and password are required' }, { status: 400 });
-    }
-
-    // Basic validation
-    if (username.length < 3 || password.length < 6) {
-      return NextResponse.json({ error: 'Invalid credentials format' }, { status: 400 });
+    // Validate with Zod schema
+    try {
+      loginSchema.parse({ username, password });
+    } catch (error) {
+      if (error instanceof ZodError) {
+        const errorMessage = getVietnameseErrorMessage(error);
+        return NextResponse.json({ error: errorMessage }, { status: 400 });
+      }
     }
 
     // Attempt login
@@ -47,7 +49,7 @@ async function handleLogin(request: NextRequest) {
     }
   } catch (error) {
     console.error('Login API error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: 'Lỗi hệ thống, vui lòng thử lại sau' }, { status: 500 });
   }
 }
 

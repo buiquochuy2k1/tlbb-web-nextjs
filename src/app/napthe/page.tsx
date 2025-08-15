@@ -404,13 +404,14 @@ export default function NapThePage() {
                         ${selectedPackage?.id === pkg.id ? 'ring-2 ring-red-500' : ''}
                       `}
                     >
-                      {pkg.popular && (
+                      {(pkg.popular && (
                         <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 z-10">
                           <span className="bg-gradient-to-r from-yellow-400 to-red-500 text-black px-3 py-1 rounded-full text-xs font-bold">
                             🔥 PHỔ BIẾN
                           </span>
                         </div>
-                      )}
+                      )) ||
+                        null}
 
                       <div className="backdrop-blur-lg bg-gradient-to-br from-yellow-900/20 to-red-900/20 border border-yellow-500/30 rounded-xl p-4 hover:border-yellow-400/50 transition-all duration-300">
                         <div className="text-center">

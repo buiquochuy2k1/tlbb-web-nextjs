@@ -1,6 +1,12 @@
 import fs from 'fs';
 import path from 'path';
 
+// Webhook URLs from environment variables
+const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
+const LOG_TYPE = process.env.LOG_TYPE;
+
 export enum LogLevel {
   DEBUG = 'DEBUG',
   INFO = 'INFO',
@@ -86,6 +92,147 @@ class Logger {
     }
   }
 
+  /**
+   * Send log to Discord webhook
+   */
+  private async sendToDiscord(entry: LogEntry): Promise<void> {
+    if (!DISCORD_WEBHOOK_URL) return;
+
+    try {
+      // Determine color based on log level
+      const colors = {
+        [LogLevel.ERROR]: 0xff0000, // Red
+        [LogLevel.WARN]: 0xffa500, // Orange
+        [LogLevel.SUCCESS]: 0x00ff00, // Green
+        [LogLevel.INFO]: 0x0099ff, // Blue
+        [LogLevel.DEBUG]: 0x808080, // Gray
+      };
+
+      const embed = {
+        title: `[${entry.level}] ${entry.category}`,
+        description: entry.message,
+        color: colors[entry.level] || 0x808080,
+        fields: [] as Array<{
+          name: string;
+          value: string;
+          inline?: boolean;
+        }>,
+        timestamp: entry.timestamp,
+        footer: {
+          text: 'TLBB Payment System Logger',
+        },
+      };
+
+      // Add user info if available
+      if (entry.userId) {
+        embed.fields.push({
+          name: 'User ID',
+          value: entry.userId.toString(),
+          inline: true,
+        });
+      }
+
+      // Add IP info if available
+      if (entry.ip) {
+        embed.fields.push({
+          name: 'IP Address',
+          value: entry.ip,
+          inline: true,
+        });
+      }
+
+      // Add data if available
+      if (entry.data) {
+        const dataStr = typeof entry.data === 'string' ? entry.data : JSON.stringify(entry.data, null, 2);
+        if (dataStr.length > 1024) {
+          embed.fields.push({
+            name: 'Data',
+            value: dataStr.substring(0, 1021) + '...',
+            inline: false,
+          });
+        } else {
+          embed.fields.push({
+            name: 'Data',
+            value: dataStr,
+            inline: false,
+          });
+        }
+      }
+
+      const payload = {
+        embeds: [embed],
+      };
+
+      await fetch(DISCORD_WEBHOOK_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+    } catch (error) {
+      console.error('Failed to send log to Discord:', error);
+    }
+  }
+
+  /**
+   * Send log to Telegram webhook
+   */
+  private async sendToTelegram(entry: LogEntry): Promise<void> {
+    if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) return;
+
+    try {
+      // Determine emoji based on log level
+      const emojis = {
+        [LogLevel.ERROR]: '❌',
+        [LogLevel.WARN]: '⚠️',
+        [LogLevel.SUCCESS]: '✅',
+        [LogLevel.INFO]: 'ℹ️',
+        [LogLevel.DEBUG]: '🐛',
+      };
+
+      let message = `${emojis[entry.level] || '📝'} **[${entry.level}]** [${entry.category}]\n`;
+      message += `📄 ${entry.message}\n`;
+      message += `⏰ ${entry.timestamp}\n`;
+
+      // Add user info if available
+      if (entry.userId) {
+        message += `👤 User ID: ${entry.userId}\n`;
+      }
+
+      // Add IP info if available
+      if (entry.ip) {
+        message += `🌐 IP: ${entry.ip}\n`;
+      }
+
+      // Add data if available
+      if (entry.data) {
+        const dataStr = typeof entry.data === 'string' ? entry.data : JSON.stringify(entry.data, null, 2);
+        if (dataStr.length > 3000) {
+          message += `📊 Data: ${dataStr.substring(0, 2997)}...`;
+        } else {
+          message += `📊 Data: ${dataStr}`;
+        }
+      }
+
+      const telegramApiUrl = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+
+      await fetch(telegramApiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          chat_id: TELEGRAM_CHAT_ID,
+          text: message,
+          parse_mode: 'Markdown',
+        }),
+      });
+    } catch (error) {
+      console.error('Failed to send log to Telegram:', error);
+    }
+  }
+
   private rotateLogIfNeeded(filePath: string): void {
     try {
       const stats = fs.statSync(filePath);
@@ -145,8 +292,14 @@ class Logger {
       ip,
     };
 
-    // Write to file
-    this.writeToFile(entry);
+    if (LOG_TYPE === 'DISCORD') {
+      // Send to Discord and Telegram (async, don't wait)
+      this.sendToDiscord(entry).catch(console.error);
+    } else if (LOG_TYPE === 'TELEGRAM') {
+      this.sendToTelegram(entry).catch(console.error);
+    } else if (LOG_TYPE === 'WRITETOFILE') {
+      this.writeToFile(entry);
+    }
 
     // Also log to console in development
     if (process.env.NODE_ENV === 'development') {

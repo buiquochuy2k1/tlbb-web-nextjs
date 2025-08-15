@@ -1,51 +1,53 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { registerUser, isUsernameAvailable } from '@/lib/auth';
 import { withApiSecurity } from '@/lib/api-security';
+import { registerSchema, getVietnameseErrorMessage } from '@/lib/validation/auth';
+import { ZodError } from 'zod';
 
 async function handleRegisterPOST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { username, password, confirmPassword, question, answer, email, phone } = body;
 
-    // Validate input
-    if (!username || !password || !confirmPassword) {
-      return NextResponse.json(
-        { error: 'Username, password, and confirm password are required' },
-        { status: 400 }
-      );
-    }
+    // Transform data to match client schema format
+    const formData = {
+      ten: body.username,
+      mk: body.password,
+      rmk: body.confirmPassword,
+      email: body.email || '',
+      cauhoi: '1', // Default valid question
+      traloi: body.answer || '',
+      retraloi: body.answer || '',
+      ck: 'ok', // Server assumes agreement
+      maxacnhan: '1', // Server bypass captcha
+      pin: '1234', // Default PIN for server validation
+    };
 
-    // Basic validation
-    if (username.length < 3 || username.length > 20) {
-      return NextResponse.json({ error: 'Username must be 3-20 characters' }, { status: 400 });
-    }
-
-    // Check password match
-    if (password !== confirmPassword) {
-      return NextResponse.json({ error: 'Passwords do not match' }, { status: 400 });
-    }
-
-    // Check password length
-    if (password.length < 6) {
-      return NextResponse.json({ error: 'Password must be at least 6 characters long' }, { status: 400 });
+    // Validate with Zod schema
+    try {
+      registerSchema.parse(formData);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        const errorMessage = getVietnameseErrorMessage(error);
+        return NextResponse.json({ error: errorMessage }, { status: 400 });
+      }
     }
 
     // Check username availability
-    const isAvailable = await isUsernameAvailable(username);
+    const isAvailable = await isUsernameAvailable(body.username);
     if (!isAvailable) {
-      return NextResponse.json({ error: 'Username already exists' }, { status: 409 });
+      return NextResponse.json({ error: 'Tên đăng nhập đã tồn tại' }, { status: 409 });
     }
 
     // Register user
     const success = await registerUser(
       {
-        name: username,
-        password: password,
-        showpassword: password,
-        question: question || null,
-        answer: answer || null,
-        email: email || null,
-        sodienthoai: phone || '0',
+        name: body.username,
+        password: body.password,
+        showpassword: body.password,
+        question: body.question || null,
+        answer: body.answer || null,
+        email: body.email || null,
+        sodienthoai: body.phone || '0',
       },
       request
     );
@@ -53,19 +55,19 @@ async function handleRegisterPOST(request: NextRequest) {
     if (success) {
       return NextResponse.json({
         success: true,
-        message: 'Registration successful',
+        message: 'Đăng ký thành công',
       });
     } else {
-      return NextResponse.json({ error: 'Registration failed' }, { status: 500 });
+      return NextResponse.json({ error: 'Đăng ký thất bại' }, { status: 500 });
     }
   } catch (error) {
     console.error('Registration API error:', error);
 
     if (error instanceof Error && error.message === 'Username already exists') {
-      return NextResponse.json({ error: 'Username already exists' }, { status: 409 });
+      return NextResponse.json({ error: 'Tên đăng nhập đã tồn tại' }, { status: 409 });
     }
 
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: 'Lỗi hệ thống, vui lòng thử lại sau' }, { status: 500 });
   }
 }
 
@@ -75,18 +77,18 @@ async function handleUsernameCheck(request: NextRequest) {
     const username = searchParams.get('username');
 
     if (!username) {
-      return NextResponse.json({ error: 'Username parameter is required' }, { status: 400 });
+      return NextResponse.json({ error: 'Tham số tên đăng nhập là bắt buộc' }, { status: 400 });
     }
 
     const isAvailable = await isUsernameAvailable(username);
 
     return NextResponse.json({
       available: isAvailable,
-      message: isAvailable ? 'Username is available' : 'Username already exists',
+      message: isAvailable ? 'Tên đăng nhập có thể sử dụng' : 'Tên đăng nhập đã tồn tại',
     });
   } catch (error) {
     console.error('Username check API error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: 'Lỗi hệ thống, vui lòng thử lại sau' }, { status: 500 });
   }
 }
 

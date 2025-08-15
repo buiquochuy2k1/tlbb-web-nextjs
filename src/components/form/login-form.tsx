@@ -6,22 +6,23 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Link from 'next/link';
 import { useState } from 'react';
-import { Eye, EyeOff, Lock, User, LogIn, Home, UserPlus } from 'lucide-react';
+import { Eye, EyeOff, Lock, User, LogIn, Home, UserPlus, Shield } from 'lucide-react';
 import { secureFetch } from '@/lib/api-security';
-
-interface LoginFormData {
-  ten: string; // Tên đăng nhập
-  mk: string; // Mật khẩu
-}
+import { loginSchema, type LoginFormData } from '@/lib/validation/auth';
+import { ZodError } from 'zod';
 
 export function LoginForm({ className, ...props }: React.ComponentProps<'div'>) {
   const [formData, setFormData] = useState<LoginFormData>({
-    ten: '',
-    mk: '',
+    username: '',
+    password: '',
   });
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [errors, setErrors] = useState<Partial<Record<keyof LoginFormData, string>>>({});
+
+  // Check if form is valid for enabling/disabling submit button
+  const isFormValid = formData.username.length > 0 && formData.password.length > 0;
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -29,6 +30,43 @@ export function LoginForm({ className, ...props }: React.ComponentProps<'div'>) 
       ...prev,
       [name]: value,
     }));
+
+    // Clear field-specific error when user starts typing
+    if (errors[name as keyof LoginFormData]) {
+      setErrors((prev) => ({
+        ...prev,
+        [name]: undefined,
+      }));
+    }
+
+    // Clear global message when user starts typing
+    if (message) {
+      setMessage(null);
+    }
+  };
+
+  const validateForm = () => {
+    try {
+      setErrors({});
+      setMessage(null);
+
+      loginSchema.parse(formData);
+      return true;
+    } catch (error) {
+      if (error instanceof ZodError) {
+        const fieldErrors: Partial<Record<keyof LoginFormData, string>> = {};
+        error.issues.forEach((issue) => {
+          if (issue.path.length > 0) {
+            fieldErrors[issue.path[0] as keyof LoginFormData] = issue.message;
+          }
+        });
+        setErrors(fieldErrors);
+
+        const firstError = error.issues[0]?.message || 'Dữ liệu không hợp lệ';
+        setMessage({ type: 'error', text: firstError });
+      }
+      return false;
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -36,12 +74,18 @@ export function LoginForm({ className, ...props }: React.ComponentProps<'div'>) 
     setIsLoading(true);
     setMessage(null);
 
+    // Validate form before submission
+    if (!validateForm()) {
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const response = await secureFetch('/api/v1/auth/dangnhap', {
         method: 'POST',
         body: JSON.stringify({
-          username: formData.ten,
-          password: formData.mk,
+          username: formData.username,
+          password: formData.password,
         }),
       });
 
@@ -104,7 +148,7 @@ export function LoginForm({ className, ...props }: React.ComponentProps<'div'>) 
             {/* Username Field */}
             <div className="space-y-2">
               <Label
-                htmlFor="ten"
+                htmlFor="username"
                 className="text-white/90 font-medium text-sm sm:text-base flex items-center gap-2"
               >
                 <User className="w-4 h-4" />
@@ -112,22 +156,32 @@ export function LoginForm({ className, ...props }: React.ComponentProps<'div'>) 
               </Label>
               <div className="relative">
                 <Input
-                  id="ten"
-                  name="ten"
+                  id="username"
+                  name="username"
                   type="text"
                   placeholder="Nhập tên đăng nhập"
-                  value={formData.ten}
+                  value={formData.username}
                   onChange={handleInputChange}
                   required
-                  className="w-full bg-white/10 backdrop-blur-sm border border-white/20 text-white placeholder-white/50 rounded-xl px-4 py-3 focus:bg-white/15 focus:border-amber-300/50 focus:ring-2 focus:ring-amber-300/20 transition-all duration-300 text-sm sm:text-base"
+                  className={`w-full bg-white/10 backdrop-blur-sm border text-white placeholder-white/50 rounded-xl px-4 py-3 focus:bg-white/15 focus:ring-2 transition-all duration-300 text-sm sm:text-base ${
+                    errors.username
+                      ? 'border-red-400/50 focus:border-red-400/50 focus:ring-red-400/20'
+                      : 'border-white/20 focus:border-amber-300/50 focus:ring-amber-300/20'
+                  }`}
                 />
+                {errors.username && (
+                  <p className="text-red-300 text-xs mt-1 flex items-center gap-1">
+                    <Shield className="w-3 h-3" />
+                    {errors.username}
+                  </p>
+                )}
               </div>
             </div>
 
             {/* Password Field */}
             <div className="space-y-2">
               <Label
-                htmlFor="mk"
+                htmlFor="password"
                 className="text-white/90 font-medium text-sm sm:text-base flex items-center gap-2"
               >
                 <Lock className="w-4 h-4" />
@@ -135,14 +189,18 @@ export function LoginForm({ className, ...props }: React.ComponentProps<'div'>) 
               </Label>
               <div className="relative">
                 <Input
-                  id="mk"
-                  name="mk"
+                  id="password"
+                  name="password"
                   type={showPassword ? 'text' : 'password'}
                   placeholder="Nhập mật khẩu"
-                  value={formData.mk}
+                  value={formData.password}
                   onChange={handleInputChange}
                   required
-                  className="w-full bg-white/10 backdrop-blur-sm border border-white/20 text-white placeholder-white/50 rounded-xl px-4 py-3 pr-12 focus:bg-white/15 focus:border-amber-300/50 focus:ring-2 focus:ring-amber-300/20 transition-all duration-300 text-sm sm:text-base"
+                  className={`w-full bg-white/10 backdrop-blur-sm border text-white placeholder-white/50 rounded-xl px-4 py-3 pr-12 focus:bg-white/15 focus:ring-2 transition-all duration-300 text-sm sm:text-base ${
+                    errors.password
+                      ? 'border-red-400/50 focus:border-red-400/50 focus:ring-red-400/20'
+                      : 'border-white/20 focus:border-amber-300/50 focus:ring-amber-300/20'
+                  }`}
                 />
                 <button
                   type="button"
@@ -151,6 +209,12 @@ export function LoginForm({ className, ...props }: React.ComponentProps<'div'>) 
                 >
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
+                {errors.password && (
+                  <p className="text-red-300 text-xs mt-1 flex items-center gap-1">
+                    <Shield className="w-3 h-3" />
+                    {errors.password}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -167,18 +231,19 @@ export function LoginForm({ className, ...props }: React.ComponentProps<'div'>) 
             {/* Submit Button */}
             <Button
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || !isFormValid}
               className="w-full bg-gradient-to-r from-amber-500/80 to-yellow-600/80 hover:from-amber-500 hover:to-yellow-600 text-white font-bold py-3 px-6 rounded-xl border border-amber-300/30 shadow-lg shadow-amber-500/20 hover:shadow-amber-500/30 hover:scale-[1.02] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 backdrop-blur-sm text-sm sm:text-base"
             >
               {isLoading ? (
                 <div className="flex items-center justify-center gap-2">
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                  Đang xử lý...
+                  Đang đăng nhập...
                 </div>
               ) : (
                 <div className="flex items-center justify-center gap-2">
                   <LogIn className="w-4 h-4" />
                   Đăng nhập
+                  {!isFormValid && <span className="text-xs text-white/60 ml-1">(Nhập đủ thông tin)</span>}
                 </div>
               )}
             </Button>

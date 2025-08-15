@@ -8,7 +8,12 @@ const CLIENT_API_KEY = process.env.NEXT_PUBLIC_CLIENT_API_KEY || 'tlbb-client-ke
 
 // Allowed origins for API access
 const getAllowedOrigins = () => {
-  const origins = ['http://localhost:3000', 'https://localhost:3000'];
+  const origins = [
+    'http://localhost:3000',
+    'https://localhost:3000',
+    'https://tlthienha.online',
+    'https://tlthienha.online/',
+  ];
 
   // Add custom domain if specified
   if (process.env.NEXT_PUBLIC_APP_URL) {

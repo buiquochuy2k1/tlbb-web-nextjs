@@ -66,10 +66,10 @@ async function handleCreatePayment(request: NextRequest) {
 
     // Generate QR Code URL
     const bankId = '970422'; // MB Bank
-    const accountNo = '088888666660';
+    const accountNo = process.env.BANK_ACCOUNT_NO;
     const template = 'compact2';
     const description = `TLTH ${username} ${transactionCode.split(' ')[2] || transactionCode}`;
-    const accountName = 'THIEN LONG BAT BO';
+    const accountName = process.env.BANK_ACCOUNT_NAME || 'THIEN LONG BAT BO';
 
     const qrCodeUrl = `https://img.vietqr.io/image/${bankId}-${accountNo}-${template}.png?amount=${amount}&addInfo=${encodeURIComponent(
       description

@@ -7,32 +7,9 @@ import { Label } from '@/components/ui/label';
 import Link from 'next/link';
 import { useState } from 'react';
 import { secureFetch } from '@/lib/api-security';
-import {
-  Eye,
-  EyeOff,
-  Lock,
-  User,
-  Mail,
-  HelpCircle,
-  Shield,
-  UserPlus,
-  Home,
-  LogIn,
-  CheckCircle,
-} from 'lucide-react';
-
-interface RegisterFormData {
-  ten: string; // Tên đăng nhập
-  mk: string; // Mật khẩu
-  rmk: string; // Xác nhận mật khẩu
-  email: string; // Email
-  cauhoi: string; // Câu hỏi bí mật
-  traloi: string; // Trả lời bí mật
-  retraloi: string; // Xác nhận trả lời bí mật
-  ck: string; // Checkbox đồng ý điều khoản
-  maxacnhan: string; // Mã xác nhận captcha
-  pin: string; // Mã PIN
-}
+import { registerSchema, type RegisterFormData, validateUsernameFormat } from '@/lib/validation/auth';
+import { ZodError } from 'zod';
+import { Eye, EyeOff, Lock, User, Mail, HelpCircle, Shield, UserPlus, Home, LogIn } from 'lucide-react';
 
 // Danh sách câu hỏi bí mật
 const secretQuestions = [
@@ -51,7 +28,7 @@ export function RegisterForm({ className, ...props }: React.ComponentProps<'div'
     mk: '',
     rmk: '',
     email: '',
-    cauhoi: '0',
+    cauhoi: '1', // Giá trị mặc định hợp lệ
     traloi: '',
     retraloi: '',
     ck: '',
@@ -62,6 +39,8 @@ export function RegisterForm({ className, ...props }: React.ComponentProps<'div'
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [errors, setErrors] = useState<Partial<Record<keyof RegisterFormData, string>>>({});
+  const [realTimeErrors, setRealTimeErrors] = useState<Partial<Record<keyof RegisterFormData, string>>>({});
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
@@ -77,6 +56,15 @@ export function RegisterForm({ className, ...props }: React.ComponentProps<'div'
         ...prev,
         [name]: value,
       }));
+
+      // Real-time validation for username
+      if (name === 'ten') {
+        const validation = validateUsernameFormat(value);
+        setRealTimeErrors((prev) => ({
+          ...prev,
+          ten: validation.isValid ? undefined : validation.message,
+        }));
+      }
     }
   };
 
@@ -90,32 +78,36 @@ export function RegisterForm({ className, ...props }: React.ComponentProps<'div'
   const [captcha] = useState(generateCaptcha);
 
   const validateForm = () => {
-    if (formData.mk !== formData.rmk) {
-      setMessage({ type: 'error', text: 'Mật khẩu xác nhận không khớp!' });
+    try {
+      setErrors({});
+      setMessage(null);
+
+      // Validate captcha first
+      if (formData.maxacnhan !== captcha.answer) {
+        setMessage({ type: 'error', text: 'Mã xác nhận không chính xác!' });
+        return false;
+      }
+
+      // Validate with Zod schema
+      registerSchema.parse(formData);
+      return true;
+    } catch (error) {
+      if (error instanceof ZodError) {
+        // Zod validation errors
+        const fieldErrors: Partial<Record<keyof RegisterFormData, string>> = {};
+        error.issues.forEach((issue) => {
+          if (issue.path.length > 0) {
+            fieldErrors[issue.path[0] as keyof RegisterFormData] = issue.message;
+          }
+        });
+        setErrors(fieldErrors);
+
+        // Show first error message
+        const firstError = error.issues[0]?.message || 'Dữ liệu không hợp lệ';
+        setMessage({ type: 'error', text: firstError });
+      }
       return false;
     }
-
-    if (formData.traloi !== formData.retraloi) {
-      setMessage({ type: 'error', text: 'Trả lời bí mật xác nhận không khớp!' });
-      return false;
-    }
-
-    if (formData.cauhoi === '0') {
-      setMessage({ type: 'error', text: 'Vui lòng chọn câu hỏi bí mật!' });
-      return false;
-    }
-
-    if (!formData.ck) {
-      setMessage({ type: 'error', text: 'Vui lòng đồng ý với điều khoản sử dụng!' });
-      return false;
-    }
-
-    if (formData.maxacnhan !== captcha.answer) {
-      setMessage({ type: 'error', text: 'Mã xác nhận không chính xác!' });
-      return false;
-    }
-
-    return true;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -218,8 +210,18 @@ export function RegisterForm({ className, ...props }: React.ComponentProps<'div'
                   value={formData.ten}
                   onChange={handleInputChange}
                   required
-                  className="w-full bg-white/10 backdrop-blur-sm border border-white/20 text-white placeholder-white/50 rounded-xl px-4 py-3 focus:bg-white/15 focus:border-amber-300/50 focus:ring-2 focus:ring-amber-300/20 transition-all duration-300 text-sm"
+                  className={`w-full bg-white/10 backdrop-blur-sm border text-white placeholder-white/50 rounded-xl px-4 py-3 focus:bg-white/15 focus:ring-2 transition-all duration-300 text-sm ${
+                    errors.ten || realTimeErrors.ten
+                      ? 'border-red-400/50 focus:border-red-400/50 focus:ring-red-400/20'
+                      : 'border-white/20 focus:border-amber-300/50 focus:ring-amber-300/20'
+                  }`}
                 />
+                {(errors.ten || realTimeErrors.ten) && (
+                  <p className="text-red-300 text-xs mt-1 flex items-center gap-1">
+                    <Shield className="w-3 h-3" />
+                    {errors.ten || realTimeErrors.ten}
+                  </p>
+                )}
               </div>
 
               {/* Email Field */}
@@ -236,8 +238,18 @@ export function RegisterForm({ className, ...props }: React.ComponentProps<'div'
                   value={formData.email}
                   onChange={handleInputChange}
                   required
-                  className="w-full bg-white/10 backdrop-blur-sm border border-white/20 text-white placeholder-white/50 rounded-xl px-4 py-3 focus:bg-white/15 focus:border-amber-300/50 focus:ring-2 focus:ring-amber-300/20 transition-all duration-300 text-sm"
+                  className={`w-full bg-white/10 backdrop-blur-sm border text-white placeholder-white/50 rounded-xl px-4 py-3 focus:bg-white/15 focus:ring-2 transition-all duration-300 text-sm ${
+                    errors.email
+                      ? 'border-red-400/50 focus:border-red-400/50 focus:ring-red-400/20'
+                      : 'border-white/20 focus:border-amber-300/50 focus:ring-amber-300/20'
+                  }`}
                 />
+                {errors.email && (
+                  <p className="text-red-300 text-xs mt-1 flex items-center gap-1">
+                    <Shield className="w-3 h-3" />
+                    {errors.email}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -258,7 +270,11 @@ export function RegisterForm({ className, ...props }: React.ComponentProps<'div'
                     value={formData.mk}
                     onChange={handleInputChange}
                     required
-                    className="w-full bg-white/10 backdrop-blur-sm border border-white/20 text-white placeholder-white/50 rounded-xl px-4 py-3 pr-12 focus:bg-white/15 focus:border-amber-300/50 focus:ring-2 focus:ring-amber-300/20 transition-all duration-300 text-sm"
+                    className={`w-full bg-white/10 backdrop-blur-sm border text-white placeholder-white/50 rounded-xl px-4 py-3 pr-12 focus:bg-white/15 focus:ring-2 transition-all duration-300 text-sm ${
+                      errors.mk
+                        ? 'border-red-400/50 focus:border-red-400/50 focus:ring-red-400/20'
+                        : 'border-white/20 focus:border-amber-300/50 focus:ring-amber-300/20'
+                    }`}
                   />
                   <button
                     type="button"
@@ -268,6 +284,12 @@ export function RegisterForm({ className, ...props }: React.ComponentProps<'div'
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
+                {errors.mk && (
+                  <p className="text-red-300 text-xs mt-1 flex items-center gap-1">
+                    <Shield className="w-3 h-3" />
+                    {errors.mk}
+                  </p>
+                )}
               </div>
 
               {/* Confirm Password Field */}
@@ -285,7 +307,11 @@ export function RegisterForm({ className, ...props }: React.ComponentProps<'div'
                     value={formData.rmk}
                     onChange={handleInputChange}
                     required
-                    className="w-full bg-white/10 backdrop-blur-sm border border-white/20 text-white placeholder-white/50 rounded-xl px-4 py-3 pr-12 focus:bg-white/15 focus:border-amber-300/50 focus:ring-2 focus:ring-amber-300/20 transition-all duration-300 text-sm"
+                    className={`w-full bg-white/10 backdrop-blur-sm border text-white placeholder-white/50 rounded-xl px-4 py-3 pr-12 focus:bg-white/15 focus:ring-2 transition-all duration-300 text-sm ${
+                      errors.rmk
+                        ? 'border-red-400/50 focus:border-red-400/50 focus:ring-red-400/20'
+                        : 'border-white/20 focus:border-amber-300/50 focus:ring-amber-300/20'
+                    }`}
                   />
                   <button
                     type="button"
@@ -295,6 +321,12 @@ export function RegisterForm({ className, ...props }: React.ComponentProps<'div'
                     {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
+                {errors.rmk && (
+                  <p className="text-red-300 text-xs mt-1 flex items-center gap-1">
+                    <Shield className="w-3 h-3" />
+                    {errors.rmk}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -310,7 +342,11 @@ export function RegisterForm({ className, ...props }: React.ComponentProps<'div'
                 value={formData.cauhoi}
                 onChange={handleInputChange}
                 required
-                className="w-full bg-white/10 backdrop-blur-sm border border-white/20 text-white rounded-xl px-4 py-3 focus:bg-white/15 focus:border-amber-300/50 focus:ring-2 focus:ring-amber-300/20 transition-all duration-300 text-sm"
+                className={`w-full bg-white/10 backdrop-blur-sm border text-white rounded-xl px-4 py-3 focus:bg-white/15 focus:ring-2 transition-all duration-300 text-sm ${
+                  errors.cauhoi
+                    ? 'border-red-400/50 focus:border-red-400/50 focus:ring-red-400/20'
+                    : 'border-white/20 focus:border-amber-300/50 focus:ring-amber-300/20'
+                }`}
               >
                 {secretQuestions.map((question) => (
                   <option key={question.value} value={question.value} className="bg-gray-800 text-white">
@@ -318,6 +354,12 @@ export function RegisterForm({ className, ...props }: React.ComponentProps<'div'
                   </option>
                 ))}
               </select>
+              {errors.cauhoi && (
+                <p className="text-red-300 text-xs mt-1 flex items-center gap-1">
+                  <Shield className="w-3 h-3" />
+                  {errors.cauhoi}
+                </p>
+              )}
             </div>
 
             {/* Secret Answer Fields Row */}
@@ -335,8 +377,18 @@ export function RegisterForm({ className, ...props }: React.ComponentProps<'div'
                   value={formData.traloi}
                   onChange={handleInputChange}
                   required
-                  className="w-full bg-white/10 backdrop-blur-sm border border-white/20 text-white placeholder-white/50 rounded-xl px-4 py-3 focus:bg-white/15 focus:border-amber-300/50 focus:ring-2 focus:ring-amber-300/20 transition-all duration-300 text-sm"
+                  className={`w-full bg-white/10 backdrop-blur-sm border text-white placeholder-white/50 rounded-xl px-4 py-3 focus:bg-white/15 focus:ring-2 transition-all duration-300 text-sm ${
+                    errors.traloi
+                      ? 'border-red-400/50 focus:border-red-400/50 focus:ring-red-400/20'
+                      : 'border-white/20 focus:border-amber-300/50 focus:ring-amber-300/20'
+                  }`}
                 />
+                {errors.traloi && (
+                  <p className="text-red-300 text-xs mt-1 flex items-center gap-1">
+                    <Shield className="w-3 h-3" />
+                    {errors.traloi}
+                  </p>
+                )}
               </div>
 
               {/* Confirm Secret Answer */}
@@ -352,8 +404,18 @@ export function RegisterForm({ className, ...props }: React.ComponentProps<'div'
                   value={formData.retraloi}
                   onChange={handleInputChange}
                   required
-                  className="w-full bg-white/10 backdrop-blur-sm border border-white/20 text-white placeholder-white/50 rounded-xl px-4 py-3 focus:bg-white/15 focus:border-amber-300/50 focus:ring-2 focus:ring-amber-300/20 transition-all duration-300 text-sm"
+                  className={`w-full bg-white/10 backdrop-blur-sm border text-white placeholder-white/50 rounded-xl px-4 py-3 focus:bg-white/15 focus:ring-2 transition-all duration-300 text-sm ${
+                    errors.retraloi
+                      ? 'border-red-400/50 focus:border-red-400/50 focus:ring-red-400/20'
+                      : 'border-white/20 focus:border-amber-300/50 focus:ring-amber-300/20'
+                  }`}
                 />
+                {errors.retraloi && (
+                  <p className="text-red-300 text-xs mt-1 flex items-center gap-1">
+                    <Shield className="w-3 h-3" />
+                    {errors.retraloi}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -374,8 +436,18 @@ export function RegisterForm({ className, ...props }: React.ComponentProps<'div'
                 value={formData.maxacnhan}
                 onChange={handleInputChange}
                 required
-                className="w-full bg-white/10 backdrop-blur-sm border border-white/20 text-white placeholder-white/50 rounded-xl px-4 py-3 focus:bg-white/15 focus:border-amber-300/50 focus:ring-2 focus:ring-amber-300/20 transition-all duration-300 text-sm"
+                className={`w-full bg-white/10 backdrop-blur-sm border text-white placeholder-white/50 rounded-xl px-4 py-3 focus:bg-white/15 focus:ring-2 transition-all duration-300 text-sm ${
+                  errors.maxacnhan
+                    ? 'border-red-400/50 focus:border-red-400/50 focus:ring-red-400/20'
+                    : 'border-white/20 focus:border-amber-300/50 focus:ring-amber-300/20'
+                }`}
               />
+              {errors.maxacnhan && (
+                <p className="text-red-300 text-xs mt-1 flex items-center gap-1">
+                  <Shield className="w-3 h-3" />
+                  {errors.maxacnhan}
+                </p>
+              )}
             </div>
 
             {/* Mã PIN */}
@@ -392,8 +464,18 @@ export function RegisterForm({ className, ...props }: React.ComponentProps<'div'
                 value={formData.pin}
                 onChange={handleInputChange}
                 required
-                className="w-full bg-white/10 backdrop-blur-sm border border-white/20 text-white placeholder-white/50 rounded-xl px-4 py-3 focus:bg-white/15 focus:border-amber-300/50 focus:ring-2 focus:ring-amber-300/20 transition-all duration-300 text-sm"
+                className={`w-full bg-white/10 backdrop-blur-sm border text-white placeholder-white/50 rounded-xl px-4 py-3 focus:bg-white/15 focus:ring-2 transition-all duration-300 text-sm ${
+                  errors.pin
+                    ? 'border-red-400/50 focus:border-red-400/50 focus:ring-red-400/20'
+                    : 'border-white/20 focus:border-amber-300/50 focus:ring-amber-300/20'
+                }`}
               />
+              {errors.pin && (
+                <p className="text-red-300 text-xs mt-1 flex items-center gap-1">
+                  <Shield className="w-3 h-3" />
+                  {errors.pin}
+                </p>
+              )}
             </div>
 
             {/* Terms Checkbox */}
@@ -406,23 +488,31 @@ export function RegisterForm({ className, ...props }: React.ComponentProps<'div'
                 required
                 className="mt-1 w-4 h-4 text-amber-400 bg-white/10 border-white/30 rounded focus:ring-amber-300 focus:ring-2"
               />
-              <Label htmlFor="ck" className="text-sm text-white/80 leading-relaxed">
-                Tôi đồng ý với{' '}
-                <Link
-                  href="#"
-                  className="text-amber-300 hover:text-amber-200 underline transition-colors duration-300"
-                >
-                  Điều khoản sử dụng
-                </Link>{' '}
-                và{' '}
-                <Link
-                  href="#"
-                  className="text-amber-300 hover:text-amber-200 underline transition-colors duration-300"
-                >
-                  Chính sách bảo mật
-                </Link>{' '}
-                của Thiên Long Thiên Hà
-              </Label>
+              <div className="flex-1">
+                <Label htmlFor="ck" className="text-sm text-white/80 leading-relaxed">
+                  Tôi đồng ý với{' '}
+                  <Link
+                    href="#"
+                    className="text-amber-300 hover:text-amber-200 underline transition-colors duration-300"
+                  >
+                    Điều khoản sử dụng
+                  </Link>{' '}
+                  và{' '}
+                  <Link
+                    href="#"
+                    className="text-amber-300 hover:text-amber-200 underline transition-colors duration-300"
+                  >
+                    Chính sách bảo mật
+                  </Link>{' '}
+                  của Thiên Long Thiên Hà
+                </Label>
+                {errors.ck && (
+                  <p className="text-red-300 text-xs mt-2 flex items-center gap-1">
+                    <Shield className="w-3 h-3" />
+                    {errors.ck}
+                  </p>
+                )}
+              </div>
             </div>
 
             {/* Submit Button */}
