@@ -1,12 +1,13 @@
 'use client';
 
 import { useState } from 'react';
+import { toast } from 'sonner';
 
 export default function NhapCodePage() {
   const [code, setCode] = useState('');
   const handleNhapCode = () => {
     console.log(code);
-    alert('Tính năng đang cập nhật. Code: ' + code);
+    toast.success('Tính năng đang cập nhật. Code: ' + code);
     setCode('');
   };
   return (

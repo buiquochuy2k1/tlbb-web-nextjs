@@ -43,6 +43,30 @@ interface Server {
   status: string;
 }
 
+interface Article {
+  ar_id: number;
+  ar_title: string;
+  ar_img: string;
+  ar_des: string;
+  ar_content: string;
+  ar_slug: string;
+  ar_type: number;
+  ar_time: number;
+  ar_by: number;
+  ar_views: number;
+  ar_featured: boolean;
+  ar_status: number;
+  ar_meta_keywords?: string;
+  ar_meta_description?: string;
+  ar_updated_at?: number;
+  ar_order: number;
+  category_name?: string;
+  category_color?: string;
+  category_icon?: string;
+  author_name?: string;
+  tags?: string[];
+}
+
 export default function HomePage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -52,6 +76,8 @@ export default function HomePage() {
   const [isLoadingRankings, setIsLoadingRankings] = useState(true);
   const [servers, setServers] = useState<Server[]>([]);
   const [isLoadingServers, setIsLoadingServers] = useState(true);
+  const [news, setNews] = useState<Article[]>([]);
+  const [isLoadingNews, setIsLoadingNews] = useState(true);
 
   // Check authentication status from server
   useEffect(() => {
@@ -117,6 +143,54 @@ export default function HomePage() {
 
     fetchServers();
   }, []);
+
+  // Fetch latest news
+  useEffect(() => {
+    const fetchNews = async () => {
+      try {
+        const response = await secureFetch('/api/v1/tintuc/getArticles?limit=2');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.data) {
+            setNews(data.data);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching news:', error);
+      } finally {
+        setIsLoadingNews(false);
+      }
+    };
+
+    fetchNews();
+  }, []);
+
+  // Utility functions
+  const getTimeAgo = (timestamp: number) => {
+    const date = new Date(timestamp * 1000);
+    const now = new Date();
+    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
+
+    if (diffInHours < 1) return 'Vừa xong';
+    if (diffInHours < 24) return `${diffInHours} giờ trước`;
+    const diffInDays = Math.floor(diffInHours / 24);
+    if (diffInDays < 7) return `${diffInDays} ngày trước`;
+    const diffInWeeks = Math.floor(diffInDays / 7);
+    return `${diffInWeeks} tuần trước`;
+  };
+
+  const getCategoryStyle = (categoryName?: string) => {
+    switch (categoryName?.toLowerCase()) {
+      case 'cập nhật':
+        return 'bg-green-500/20 text-green-300 border border-green-400/30';
+      case 'sự kiện':
+        return 'bg-red-500/20 text-red-300 border border-red-400/30';
+      case 'giải đấu':
+        return 'bg-yellow-500/20 text-yellow-300 border border-yellow-400/30';
+      default:
+        return 'bg-blue-500/20 text-blue-300 border border-blue-400/30';
+    }
+  };
 
   // Logout function
   const handleLogout = async () => {
@@ -762,91 +836,146 @@ export default function HomePage() {
               {/* Content */}
               <div className="p-6 flex flex-col max-h-[600px]">
                 <div className="space-y-4 flex-1 overflow-y-auto custom-scrollbar">
-                  {[
-                    {
-                      title: 'Cập Nhật Phiên Bản 2.1.6 - Tân Thiên Long',
-                      summary:
-                        'Phiên bản mới với nhiều tính năng hấp dẫn: Boss thế giới mới, kỹ năng Tân Thiên Long, và hệ thống bang hội nâng cao...',
-                      date: '2024-01-15',
-                      category: 'Cập Nhật',
-                      hot: true,
-                    },
-                    {
-                      title: 'Sự Kiện Tết Nguyên Đán 2024',
-                      summary:
-                        'Tham gia sự kiện Tết để nhận những phần thưởng độc quyền: Pet rồng vàng, trang phục Tết, và nhiều quà tặng khác...',
-                      date: '2024-01-12',
-                      category: 'Sự Kiện',
-                      hot: true,
-                    },
-                    {
-                      title: 'Giải Đấu Võ Lâm Đại Hội Q1/2024',
-                      summary:
-                        'Đăng ký tham gia giải đấu lớn nhất năm với tổng giải thưởng lên đến 500 triệu VND...',
-                      date: '2024-01-10',
-                      category: 'Giải Đấu',
-                      hot: false,
-                    },
-                    {
-                      title: 'Bảo Trì Server Định Kỳ',
-                      summary:
-                        'Thông báo bảo trì server vào thứ 3 hàng tuần từ 6:00 - 8:00 để cải thiện hiệu suất...',
-                      date: '2024-01-08',
-                      category: 'Thông Báo',
-                      hot: false,
-                    },
-                  ].map((news, index) => (
-                    <div
-                      key={index}
-                      className="bg-gradient-to-r from-blue-800/40 to-cyan-800/30 backdrop-blur-sm rounded-2xl border border-blue-400/30 p-4 hover:from-blue-700/50 hover:to-cyan-700/40 transition-all duration-300 group cursor-pointer"
-                    >
-                      <div className="flex items-start gap-3">
-                        <div className="flex-shrink-0">
-                          <div
-                            className={`w-3 h-3 rounded-full mt-2 ${
-                              news.hot
-                                ? 'bg-red-400 animate-pulse shadow-lg shadow-red-400/50'
-                                : 'bg-blue-400'
-                            }`}
-                          ></div>
-                        </div>
-
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <span
-                              className={`px-2 py-1 rounded-full text-xs font-bold ${
-                                news.category === 'Cập Nhật'
-                                  ? 'bg-green-500/20 text-green-300 border border-green-400/30'
-                                  : news.category === 'Sự Kiện'
-                                  ? 'bg-red-500/20 text-red-300 border border-red-400/30'
-                                  : news.category === 'Giải Đấu'
-                                  ? 'bg-yellow-500/20 text-yellow-300 border border-yellow-400/30'
-                                  : 'bg-blue-500/20 text-blue-300 border border-blue-400/30'
-                              }`}
-                            >
-                              {news.category}
-                            </span>
-                            {news.hot && (
-                              <span className="px-2 py-1 bg-red-500/20 text-red-300 border border-red-400/30 rounded-full text-xs font-bold animate-pulse">
-                                HOT
-                              </span>
-                            )}
-                          </div>
-
-                          <h4 className="text-white font-bold text-lg mb-2 group-hover:text-blue-200 transition-colors line-clamp-2">
-                            {news.title}
-                          </h4>
-
-                          <p className="text-blue-200/80 text-sm mb-3 line-clamp-2">{news.summary}</p>
-
-                          <div className="flex items-center gap-2 text-xs text-blue-300">
-                            <Clock className="w-3 h-3" />
-                            <span>{new Date(news.date).toLocaleDateString('vi-VN')}</span>
+                  {isLoadingNews
+                    ? // Loading skeleton
+                      Array.from({ length: 2 }).map((_, index) => (
+                        <div
+                          key={index}
+                          className="bg-gradient-to-r from-blue-800/40 to-cyan-800/30 backdrop-blur-sm rounded-2xl border border-blue-400/30 p-4 animate-pulse"
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className="flex-shrink-0">
+                              <div className="w-3 h-3 bg-blue-400/50 rounded-full mt-2"></div>
+                            </div>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-2">
+                                <div className="h-5 bg-blue-400/50 rounded w-16"></div>
+                              </div>
+                              <div className="h-5 bg-blue-400/50 rounded w-3/4 mb-2"></div>
+                              <div className="h-4 bg-blue-400/50 rounded w-full mb-1"></div>
+                              <div className="h-4 bg-blue-400/50 rounded w-2/3 mb-3"></div>
+                              <div className="h-3 bg-blue-400/50 rounded w-20"></div>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </div>
-                  ))}
+                      ))
+                    : news.length > 0
+                    ? news.map((article) => (
+                        <Link
+                          key={article.ar_id}
+                          href={`/tintuc`}
+                          className="block bg-gradient-to-r from-blue-800/40 to-cyan-800/30 backdrop-blur-sm rounded-2xl border border-blue-400/30 p-4 hover:from-blue-700/50 hover:to-cyan-700/40 transition-all duration-300 group cursor-pointer"
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className="flex-shrink-0">
+                              <div
+                                className={`w-3 h-3 rounded-full mt-2 ${
+                                  article.ar_featured
+                                    ? 'bg-red-400 animate-pulse shadow-lg shadow-red-400/50'
+                                    : 'bg-blue-400'
+                                }`}
+                              ></div>
+                            </div>
+
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-2">
+                                <span
+                                  className={`px-2 py-1 rounded-full text-xs font-bold ${getCategoryStyle(
+                                    article.category_name
+                                  )}`}
+                                >
+                                  {article.category_name || 'Tin Tức'}
+                                </span>
+                                {article.ar_featured && (
+                                  <span className="px-2 py-1 bg-red-500/20 text-red-300 border border-red-400/30 rounded-full text-xs font-bold animate-pulse">
+                                    HOT
+                                  </span>
+                                )}
+                              </div>
+
+                              <h4 className="text-white font-bold text-lg mb-2 group-hover:text-blue-200 transition-colors line-clamp-2">
+                                {article.ar_title}
+                              </h4>
+
+                              <p className="text-blue-200/80 text-sm mb-3 line-clamp-2">{article.ar_des}</p>
+
+                              <div className="flex items-center gap-2 text-xs text-blue-300">
+                                <Clock className="w-3 h-3" />
+                                <span>{getTimeAgo(article.ar_time)}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </Link>
+                      ))
+                    : // No data fallback - show static news
+                      [
+                        {
+                          title: 'Cập Nhật Phiên Bản 2.1.6 - Tân Thiên Long',
+                          summary:
+                            'Phiên bản mới với nhiều tính năng hấp dẫn: Boss thế giới mới, kỹ năng Tân Thiên Long, và hệ thống bang hội nâng cao...',
+                          date: '2024-01-15',
+                          category: 'Cập Nhật',
+                          hot: true,
+                        },
+                        {
+                          title: 'Sự Kiện Tết Nguyên Đán 2024',
+                          summary:
+                            'Tham gia sự kiện Tết để nhận những phần thưởng độc quyền: Pet rồng vàng, trang phục Tết, và nhiều quà tặng khác...',
+                          date: '2024-01-12',
+                          category: 'Sự Kiện',
+                          hot: true,
+                        },
+                      ].map((news, index) => (
+                        <Link
+                          key={index}
+                          href="/tintuc"
+                          className="block bg-gradient-to-r from-blue-800/40 to-cyan-800/30 backdrop-blur-sm rounded-2xl border border-blue-400/30 p-4 hover:from-blue-700/50 hover:to-cyan-700/40 transition-all duration-300 group cursor-pointer"
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className="flex-shrink-0">
+                              <div
+                                className={`w-3 h-3 rounded-full mt-2 ${
+                                  news.hot
+                                    ? 'bg-red-400 animate-pulse shadow-lg shadow-red-400/50'
+                                    : 'bg-blue-400'
+                                }`}
+                              ></div>
+                            </div>
+
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-2">
+                                <span
+                                  className={`px-2 py-1 rounded-full text-xs font-bold ${
+                                    news.category === 'Cập Nhật'
+                                      ? 'bg-green-500/20 text-green-300 border border-green-400/30'
+                                      : news.category === 'Sự Kiện'
+                                      ? 'bg-red-500/20 text-red-300 border border-red-400/30'
+                                      : 'bg-blue-500/20 text-blue-300 border border-blue-400/30'
+                                  }`}
+                                >
+                                  {news.category}
+                                </span>
+                                {news.hot && (
+                                  <span className="px-2 py-1 bg-red-500/20 text-red-300 border border-red-400/30 rounded-full text-xs font-bold animate-pulse">
+                                    HOT
+                                  </span>
+                                )}
+                              </div>
+
+                              <h4 className="text-white font-bold text-lg mb-2 group-hover:text-blue-200 transition-colors line-clamp-2">
+                                {news.title}
+                              </h4>
+
+                              <p className="text-blue-200/80 text-sm mb-3 line-clamp-2">{news.summary}</p>
+
+                              <div className="flex items-center gap-2 text-xs text-blue-300">
+                                <Clock className="w-3 h-3" />
+                                <span>{new Date(news.date).toLocaleDateString('vi-VN')}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </Link>
+                      ))}
                 </div>
 
                 <div className="text-center pt-4 flex-shrink-0">
