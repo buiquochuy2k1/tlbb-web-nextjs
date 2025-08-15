@@ -121,7 +121,7 @@ export default function HomePage() {
   const handleLogout = async () => {
     setIsLoggingOut(true);
     try {
-      const response = await fetch('/api/v1/auth/logout', {
+      const response = await secureFetch('/api/v1/auth/logout', {
         method: 'POST',
         credentials: 'include', // Include cookies
       });
